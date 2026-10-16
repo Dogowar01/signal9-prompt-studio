@@ -6,316 +6,407 @@
 <title>Signal9 Prompt Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=DM+Mono:wght@400&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
 <style>
-/* Layout: a two-column workbench. Controls on the left, the prompt sheet pinned on the right; stacks to one column on phones. */
+/* Layout: a gallery-led studio. Image doors pick the subject, artwork rails pick a starting work,
+   then a workbench of control panels sits beside a sticky proof card holding the closest work and the prompt. */
 :root {
-  --bg: #0A0908;
-  --panel: #131211;
-  --raise: #1C1B1A;
-  --line: #2B2826;
-  --fg: #E8E2D9;
-  --soft: #C4BDB5;
-  --muted: #8A847C;
-  --accent: #9B4F2A;
-  --accent-text: #D08A5F;
-  --on-accent: #F5F0EB;
-  --paper: #F2EEE7;
-  --ink: #1B1A19;
-  --ink-soft: #6E6861;
-  --crimson: #8E1B1B;
+  --black: #0a0908;
+  --off-black: #111010;
+  --charcoal: #1c1b1a;
+  --line: rgba(232, 226, 217, .09);
+  --line-2: rgba(232, 226, 217, .16);
+  --cream: #e8e2d9;
+  --white: #f5f0eb;
+  --grey: #8a847c;
+  --light-grey: #c4bdb5;
+  --sienna: #9B4F2A;
+  --sienna-light: #b5623a;
+  --ember: #d27a45;
+  --plum: #8E4585;
+  --plum-light: #c77bb4;
   --display: "Cormorant Garamond", Cormorant, Garamond, "Times New Roman", serif;
   --body: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "DM Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --glow: 0 10px 28px -12px rgba(214, 110, 58, .85), inset 0 1px 0 rgba(255, 255, 255, .26);
+  --fill: linear-gradient(135deg, #d27a45 0%, #a8552c 52%, #864020 100%);
+  --plum-fill: linear-gradient(160deg, #d98cc4 0%, #8E4585 55%, #5d2b56 100%);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html { background: var(--bg); }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+html { background: var(--black); scroll-behavior: smooth; }
+body {
+  margin: 0; color: var(--cream); font: 300 15px/1.6 var(--body); -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(1100px 620px at 8% -8%, rgba(155, 79, 42, .2), transparent 62%),
+    radial-gradient(900px 560px at 104% 4%, rgba(142, 69, 133, .16), transparent 60%),
+    radial-gradient(800px 600px at 50% 110%, rgba(142, 69, 133, .08), transparent 60%),
+    var(--black);
+  background-attachment: fixed;
+}
 button, input, select { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+button { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--plum-light); outline-offset: 3px; }
 [hidden] { display: none !important; }
+::selection { background: rgba(199, 123, 180, .35); }
 
-.wrap { max-width: 1240px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 0 72px; }
+/* Film grain, as on signal9studio.com.au */
+.grain {
+  position: fixed; inset: -120px; z-index: 90; pointer-events: none; opacity: .045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px; animation: grain .9s steps(4) infinite;
+}
+@keyframes grain { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-38px, 22px); } 50% { transform: translate(24px, -30px); } 75% { transform: translate(-14px, -18px); } }
 
 /* Header */
-.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-block: 22px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.logo { letter-spacing: .32em; font-size: 13px; font-weight: 500; text-transform: uppercase; }
-.logo b { color: var(--accent); font-weight: 500; }
-.top-note { font-size: 11px; color: var(--muted); letter-spacing: .16em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
-.top-note i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40; background: rgba(10, 9, 8, .72); backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1320px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.logo { font-weight: 500; font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--white); white-space: nowrap; }
+.logo b { color: var(--ember); font-weight: 500; }
+.brand-div { width: 1px; height: 22px; background: var(--line-2); }
+.brand-app { font-family: var(--display); font-style: italic; font-size: 20px; color: var(--light-grey); white-space: nowrap; }
+.status { display: inline-flex; align-items: center; gap: 9px; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, .03); font-size: 11.5px; letter-spacing: .08em; color: var(--light-grey); white-space: nowrap; }
+.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 0 0 rgba(210, 122, 69, .6); animation: pulse 2.4s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(210, 122, 69, .55); } 70% { box-shadow: 0 0 0 9px rgba(210, 122, 69, 0); } 100% { box-shadow: 0 0 0 0 rgba(210, 122, 69, 0); } }
+
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 0 96px; }
 
 /* Intro */
-.intro { padding-block: 44px 30px; display: grid; gap: 12px; }
-.eyebrow { margin: 0; font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--accent-text); }
-h1 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 5.4vw, 58px); line-height: 1.02; margin: 0; text-wrap: balance; }
-h1 em { font-style: italic; color: var(--soft); }
-.lede { max-width: 64ch; color: var(--soft); margin: 0; }
+.intro { padding-block: 52px 26px; display: grid; gap: 14px; animation: rise 1s var(--ease) both; }
+.eyebrow { margin: 0; font-size: 11px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; color: var(--ember); }
+h1 { font-family: var(--display); font-weight: 300; font-size: clamp(40px, 6.2vw, 76px); line-height: .98; margin: 0; letter-spacing: -.01em; text-wrap: balance; color: var(--white); }
+h1 em { font-style: italic; background: linear-gradient(100deg, var(--ember), var(--plum-light)); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: .06em; }
+.lede { max-width: 62ch; margin: 0; color: var(--light-grey); font-size: 16px; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
-/* Section headings */
-.sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
-.sec-title { font-family: var(--display); font-weight: 400; font-size: 28px; margin: 0; line-height: 1.1; }
-.sec-hint { font-size: 12px; color: var(--muted); letter-spacing: .04em; margin: 0; max-width: 70ch; }
+/* Subject doors */
+.doors { display: flex; height: clamp(200px, 30vw, 360px); border-radius: 26px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 40px 90px -50px rgba(0, 0, 0, .95); animation: rise 1.1s var(--ease) .1s both; }
+.door { position: relative; flex: 1; border: 0; padding: 0; cursor: pointer; overflow: hidden; background: var(--off-black); color: var(--white); text-align: left; transition: flex .9s var(--ease); }
+.door[aria-pressed="true"] { flex: 1.7; }
+.door:hover { flex: 1.9; }
+.door-img { position: absolute; inset: 0; background-size: cover; background-position: center 28%; scale: 1.08; filter: grayscale(.65) brightness(.42); transition: filter 1s ease, scale 1.4s var(--ease); }
+.door:hover .door-img, .door[aria-pressed="true"] .door-img { filter: grayscale(0) brightness(.8); scale: 1; }
+.door-veil { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10, 9, 8, .94) 0%, rgba(10, 9, 8, .3) 50%, rgba(10, 9, 8, .12) 100%); }
+.door + .door::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; z-index: 3; background: rgba(232, 226, 217, .14); transition: background .4s, box-shadow .4s; }
+.door:hover::before, .door:hover + .door::before { background: var(--plum-light); box-shadow: 0 0 16px 2px rgba(199, 123, 180, .55); }
+.door-text { position: absolute; left: clamp(16px, 2.4vw, 30px); right: 16px; bottom: clamp(16px, 2.2vw, 28px); z-index: 2; display: grid; gap: 4px; }
+.door-count { font-size: 10.5px; letter-spacing: .26em; text-transform: uppercase; color: var(--light-grey); }
+.door-title { font-family: var(--display); font-weight: 300; font-size: clamp(26px, 3.6vw, 50px); line-height: 1; }
+.door-sub { font-size: 13px; color: var(--light-grey); }
+.door-text::after { content: ""; height: 2px; width: 0; margin-top: 10px; background: linear-gradient(90deg, var(--ember), var(--plum-light)); transition: width .7s var(--ease); }
+.door[aria-pressed="true"] .door-text::after { width: 56px; }
 
-/* Subject type switch */
-.kinds { display: flex; border: 1px solid var(--line); width: fit-content; max-width: 100%; margin-bottom: 26px; }
-.kind { appearance: none; background: transparent; border: 0; border-right: 1px solid var(--line); color: var(--soft); padding: 13px 22px; cursor: pointer; display: grid; gap: 2px; text-align: left; }
-.kind:last-child { border-right: 0; }
-.kind:hover { color: var(--fg); background: var(--panel); }
-.kind b { font-family: var(--display); font-weight: 500; font-size: 21px; line-height: 1.1; }
-.kind span { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.kind[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
-.kind[aria-pressed="true"] span { color: var(--on-accent); opacity: .8; }
+/* Gallery rails */
+.gallery { margin-top: 44px; display: grid; gap: 34px; }
+.collection { display: grid; gap: 14px; min-width: 0; }
+.rail-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.rail-title { margin: 0; font-family: var(--display); font-style: italic; font-weight: 400; font-size: 30px; line-height: 1.1; color: var(--white); }
+.rail-count { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--grey); }
+.rail-note { font-size: 13px; color: var(--grey); margin-left: auto; }
+.rail { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(148px, 16vw, 206px); gap: 16px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding: 8px 4px 16px; margin-inline: -4px; scrollbar-width: thin; scrollbar-color: rgba(232, 226, 217, .18) transparent; }
+.rail::-webkit-scrollbar, .proof::-webkit-scrollbar, .well::-webkit-scrollbar { height: 6px; width: 6px; }
+.rail::-webkit-scrollbar-track, .proof::-webkit-scrollbar-track, .well::-webkit-scrollbar-track { background: transparent; }
+.rail::-webkit-scrollbar-thumb, .proof::-webkit-scrollbar-thumb, .well::-webkit-scrollbar-thumb { background: rgba(232, 226, 217, .14); border-radius: 99px; }
+.rail::-webkit-scrollbar-thumb:hover { background: rgba(199, 123, 180, .5); }
+.rail::-webkit-scrollbar-button { display: none; }
+.work { position: relative; border: 0; padding: 0; background: none; color: inherit; text-align: left; cursor: pointer; scroll-snap-align: start; display: grid; gap: 10px; align-content: start; }
+.work-frame { position: relative; display: block; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; background: var(--plum-fill); box-shadow: 0 18px 40px -26px rgba(0, 0, 0, .95), 0 0 0 1px var(--line); transition: transform .55s var(--ease), box-shadow .55s var(--ease); }
+.work-frame img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.86) brightness(.92); transition: transform 1.3s var(--ease), filter .6s ease; }
+.work:hover .work-frame { transform: translateY(-5px); box-shadow: 0 28px 54px -26px rgba(0, 0, 0, .95), 0 0 0 1px rgba(199, 123, 180, .45); }
+.work:hover .work-frame img { transform: scale(1.06); filter: none; }
+.work[aria-pressed="true"] .work-frame { box-shadow: 0 0 0 2px var(--ember), 0 22px 50px -18px rgba(214, 110, 58, .65); }
+.work[aria-pressed="true"] .work-frame img { filter: none; }
+.work-check { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--fill); color: #fff8f2; box-shadow: var(--glow); opacity: 0; transform: scale(.5); transition: opacity .3s, transform .4s var(--ease); }
+.work[aria-pressed="true"] .work-check { opacity: 1; transform: scale(1); }
+.work-name { font-family: var(--display); font-size: 21px; line-height: 1.1; color: var(--white); }
+.work-meta { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--grey); line-height: 1.5; }
+.work[aria-pressed="true"] .work-meta { color: var(--ember); }
 
-/* Presets */
-.preset-sets { display: grid; gap: 20px; }
-.preset-collection { margin: 0 0 10px; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
-.presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
-.preset { appearance: none; text-align: left; background: var(--panel); border: 1px solid var(--line); padding: 0; cursor: pointer; display: grid; align-content: start; min-width: 0; overflow: hidden; transition: border-color .15s; }
-.preset:hover { border-color: var(--muted); }
-.preset[aria-pressed="true"] { border-color: var(--accent); }
-.preset-thumb { display: block; width: 100%; aspect-ratio: 4 / 3; background: var(--raise); }
-.preset-body { padding: 14px 14px 16px; display: grid; gap: 4px; }
-.preset-name { font-family: var(--display); font-size: 24px; line-height: 1.1; }
-.preset-meta { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.preset[aria-pressed="true"] .preset-meta { color: var(--accent-text); }
+/* Crack reveal, the website's signature opening */
+@keyframes crack {
+  0% { opacity: 0; clip-path: polygon(48% 0%, 45% 18%, 55% 32%, 42% 55%, 54% 70%, 47% 100%, 53% 100%, 58% 70%, 48% 55%, 60% 32%, 50% 18%, 52% 0%); }
+  14% { opacity: 1; }
+  100% { opacity: 1; clip-path: polygon(0% 0%, 0% 20%, 0% 35%, 0% 55%, 0% 75%, 0% 100%, 100% 100%, 100% 70%, 100% 50%, 100% 30%, 100% 15%, 100% 0%); }
+}
+.crack { animation: crack 1.5s cubic-bezier(.65, 0, .35, 1) both; animation-delay: var(--d, 0s); }
+@keyframes breathe { 0%, 100% { scale: 1; } 50% { scale: 1.035; } }
 
-/* Bench */
-.bench { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 460px); gap: 36px; margin-top: 40px; align-items: start; }
-.controls { display: grid; gap: 30px; min-width: 0; }
-.cluster { display: grid; }
-.cluster-title { font-family: var(--display); font-style: italic; font-weight: 400; font-size: 30px; margin: 0 0 4px; color: var(--fg); display: flex; align-items: center; gap: 14px; }
-.cluster-title::before { content: ""; width: 9px; height: 9px; background: var(--accent); flex: none; transform: rotate(8deg); }
-.group { border-top: 1px solid var(--line); padding-block: 16px; display: grid; gap: 12px; }
-.group-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.group-title { margin: 0; font-size: 12px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--soft); }
-.group-hint { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
-.lock { appearance: none; background: none; border: 1px solid transparent; color: var(--muted); cursor: pointer; padding: 4px 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; flex: none; }
-.lock:hover { color: var(--fg); }
-.lock[aria-pressed="true"] { color: var(--accent-text); border-color: var(--line); }
-.lock svg { display: block; }
+/* Workbench */
+.bench { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 470px); gap: 32px; margin-top: 56px; align-items: start; }
+.controls { display: grid; gap: 22px; min-width: 0; }
+.panel { background: linear-gradient(180deg, rgba(255, 255, 255, .038), rgba(255, 255, 255, .014)); border: 1px solid var(--line); border-radius: 24px; padding: 8px 26px 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 30px 70px -50px rgba(0, 0, 0, .9); }
+.panel-head { display: flex; align-items: baseline; gap: 14px; padding-block: 20px 6px; }
+.panel-num { font-family: var(--display); font-size: 15px; color: var(--ember); letter-spacing: .1em; }
+.panel-title { margin: 0; font-family: var(--display); font-style: italic; font-weight: 400; font-size: 32px; line-height: 1.1; color: var(--white); }
+.group { padding-block: 18px; display: grid; gap: 13px; }
+.group + .group { border-top: 1px solid var(--line); }
+.group-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.group-title { margin: 0; font-size: 11.5px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--light-grey); }
+.group-hint { margin: 3px 0 0; font-size: 13px; color: var(--grey); }
+.lock { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .02); color: var(--grey); display: grid; place-items: center; cursor: pointer; transition: all .25s; }
+.lock:hover { color: var(--white); border-color: rgba(232, 226, 217, .35); }
+.lock[aria-pressed="true"] { color: var(--plum-light); border-color: rgba(199, 123, 180, .55); background: rgba(142, 69, 133, .2); box-shadow: 0 0 18px -4px rgba(199, 123, 180, .55); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { appearance: none; border: 1px solid var(--line); background: transparent; color: var(--soft); font-size: 13.5px; padding: 7px 13px; border-radius: 2px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background .15s, border-color .15s, color .15s; }
-.chip:hover { border-color: var(--muted); color: var(--fg); }
-.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.sw { display: inline-flex; }
-.sw span { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(232,226,217,.28); margin-left: -3px; }
-.sw span:first-child { margin-left: 0; }
+.chip { appearance: none; height: 36px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .025); color: var(--light-grey); font-size: 13.5px; font-weight: 400; cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: transform .18s var(--ease), background .25s, border-color .25s, color .25s, box-shadow .25s; }
+.chip:hover { border-color: rgba(232, 226, 217, .34); color: var(--white); transform: translateY(-1px); background: rgba(255, 255, 255, .05); }
+.chip:active { transform: scale(.97); }
+.chip[aria-pressed="true"] { background: var(--fill); border-color: transparent; color: #fff8f2; box-shadow: var(--glow); }
+.chip.pal { padding: 0 15px 0 5px; }
+.pal-sw { display: flex; width: 38px; height: 26px; border-radius: 999px; overflow: hidden; box-shadow: 0 0 0 1px rgba(232, 226, 217, .2); }
+.pal-sw span { flex: 1; }
 
-/* Intensity */
-.intensity { display: grid; gap: 10px; }
-.intensity-read { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.intensity-name { font-family: var(--display); font-style: italic; font-size: 26px; line-height: 1; }
-.intensity-desc { font-size: 13px; color: var(--muted); }
-input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
-.ticks { display: flex; justify-content: space-between; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+/* Range sliders */
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 26px; background: transparent; margin: 0; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 99px; background: linear-gradient(90deg, rgba(232, 226, 217, .55), var(--sienna-light) 55%, var(--plum)); }
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 99px; background: linear-gradient(90deg, rgba(232, 226, 217, .55), var(--sienna-light) 55%, var(--plum)); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: var(--white); border: 0; box-shadow: 0 0 0 5px rgba(210, 122, 69, .3), 0 6px 14px rgba(0, 0, 0, .6); transition: box-shadow .2s; }
+input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--white); border: 0; box-shadow: 0 0 0 5px rgba(210, 122, 69, .3), 0 6px 14px rgba(0, 0, 0, .6); }
+input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 7px rgba(199, 123, 180, .32), 0 6px 14px rgba(0, 0, 0, .6); }
 
-.text-in { width: 100%; background: var(--panel); border: 1px solid var(--line); padding: 11px 13px; font-size: 14px; border-radius: 2px; }
-.text-in::placeholder { color: var(--muted); }
+.intensity { display: grid; gap: 12px; }
+.intensity-read { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.intensity-name { font-family: var(--display); font-style: italic; font-size: 34px; line-height: 1; color: var(--white); }
+.intensity-desc { font-size: 13.5px; color: var(--grey); }
+.ticks { display: flex; justify-content: space-between; }
+.tick { border: 0; background: none; padding: 4px 0; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--grey); cursor: pointer; transition: color .2s; }
+.tick:hover { color: var(--white); }
+.tick[aria-current="true"] { color: var(--ember); }
 
-/* Prompt sheet */
-.sheet { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); background: var(--panel); border: 1px solid var(--line); padding: 22px; display: grid; gap: 18px; max-height: calc(100vh - 32px); overflow: auto; min-width: 0; }
-/* The proof: a paper print with crop marks, showing a live layout study */
-.sheet > .proof { margin: -22px -22px 0; }
-.proof { position: relative; background: var(--paper); color: var(--ink); padding: 26px 26px 18px; display: grid; gap: 16px; }
-.proof-art { display: grid; place-items: center; min-height: 120px; }
-.proof-art canvas { display: block; max-width: 100%; box-shadow: 0 1px 2px rgba(27, 26, 25, .18); }
-.mark { position: absolute; width: 11px; height: 11px; border: 0 solid rgba(27, 26, 25, .5); }
-.mark.tl { top: 9px; left: 9px; border-top-width: 1px; border-left-width: 1px; }
-.mark.tr { top: 9px; right: 9px; border-top-width: 1px; border-right-width: 1px; }
-.mark.bl { bottom: 9px; left: 9px; border-bottom-width: 1px; border-left-width: 1px; }
-.mark.br { bottom: 9px; right: 9px; border-bottom-width: 1px; border-right-width: 1px; }
-.proof-cap { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
-.proof .eyebrow { color: var(--crimson); }
-.proof .work-title { color: var(--ink); }
-.proof .edition { color: var(--ink-soft); }
-.proof .icon-btn { border-color: rgba(27, 26, 25, .25); color: var(--ink); }
-.proof .icon-btn:hover { border-color: var(--ink); color: var(--ink); }
-.proof :focus-visible { outline-color: var(--crimson); }
-.card-thumb { display: block; width: 100%; aspect-ratio: 20 / 9; background: var(--raise); }
+.text-in { width: 100%; height: 48px; background: rgba(0, 0, 0, .28); border: 1px solid var(--line-2); padding: 0 16px; font-size: 14.5px; border-radius: 14px; transition: border-color .2s, box-shadow .2s; }
+.text-in:focus { outline: none; border-color: rgba(199, 123, 180, .6); box-shadow: 0 0 0 4px rgba(142, 69, 133, .2); }
+.text-in::placeholder { color: var(--grey); }
 
-/* Signal9 hairlines in the page margins */
-@media (min-width: 1400px) {
-  body::before, body::after { content: ""; position: fixed; top: 0; bottom: 0; width: 1px; pointer-events: none; }
-  body::before { left: calc(50% - 668px); background: var(--crimson); opacity: .8; }
-  body::after { left: calc(50% - 660px); background: var(--line); }
-}
-.work-title { font-family: var(--display); font-style: italic; font-weight: 400; font-size: 38px; line-height: 1; margin: 6px 0 0; }
-.edition { margin: 8px 0 0; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-variant-numeric: tabular-nums; }
-.icon-btn { appearance: none; background: none; border: 1px solid var(--line); color: var(--soft); width: 36px; height: 36px; display: grid; place-items: center; cursor: pointer; flex: none; }
-.icon-btn:hover { color: var(--fg); border-color: var(--muted); }
+/* Proof card */
+.proof { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); max-height: calc(100vh - 96px); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(232, 226, 217, .16) transparent; border-radius: 28px; padding: 12px; display: grid; gap: 4px; background: linear-gradient(180deg, rgba(30, 28, 27, .9), rgba(15, 14, 13, .94)); border: 1px solid var(--line-2); box-shadow: 0 50px 100px -50px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .06); min-width: 0; }
+.proof-art { position: relative; margin: 0; border-radius: 20px; overflow: hidden; aspect-ratio: 1 / 1.08; background: var(--plum-fill); }
+.proof-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.proof-art img.crack { animation: crack 1.5s cubic-bezier(.65, 0, .35, 1) both, breathe 24s ease-in-out 2s infinite; }
+.proof-art figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 70px 22px 18px; background: linear-gradient(to top, rgba(10, 9, 8, .92), rgba(10, 9, 8, .5) 55%, transparent); display: grid; gap: 2px; }
+.proof-label { font-size: 10.5px; letter-spacing: .26em; text-transform: uppercase; color: var(--plum-light); }
+.proof-work { font-family: var(--display); font-size: 24px; line-height: 1.1; color: var(--white); }
+.proof-col { font-size: 12.5px; color: var(--light-grey); }
+.proof-body { padding: 18px 12px 12px; display: grid; gap: 20px; }
+.title-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.work-title { font-family: var(--display); font-style: italic; font-weight: 300; font-size: 44px; line-height: 1; margin: 6px 0 0; color: var(--white); }
+.round { flex: none; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .03); color: var(--light-grey); display: grid; place-items: center; cursor: pointer; transition: all .3s var(--ease); }
+.round:hover { color: var(--white); border-color: rgba(199, 123, 180, .55); box-shadow: 0 0 20px -4px rgba(199, 123, 180, .5); }
+.round:active svg { transform: rotate(-200deg); }
+.round svg { transition: transform .5s var(--ease); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.tag { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 999px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); font-size: 12px; color: var(--light-grey); font-variant-numeric: tabular-nums; }
+.tag .pal-sw { width: 26px; height: 14px; }
 
-.tabs { display: flex; border-bottom: 1px solid var(--line); overflow-x: auto; }
-.tab { appearance: none; flex: 1 0 auto; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 8px; font-size: 12.5px; letter-spacing: .04em; cursor: pointer; white-space: nowrap; margin-bottom: -1px; }
-.tab:hover { color: var(--fg); }
-.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 4px; border-radius: 999px; background: rgba(0, 0, 0, .3); border: 1px solid var(--line); }
+.seg button { border: 0; background: none; border-radius: 999px; height: 36px; padding: 0 6px; font-size: 12.5px; font-weight: 500; color: var(--grey); cursor: pointer; white-space: nowrap; transition: background .3s, color .3s, box-shadow .3s; }
+.seg button:hover { color: var(--white); }
+.seg button[aria-selected="true"] { background: var(--cream); color: var(--black); box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .8); }
 
-.field { display: grid; gap: 8px; }
+.field { display: grid; gap: 9px; }
 .field-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.label { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--soft); }
-.count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.out { font-family: var(--mono); font-size: 12.5px; line-height: 1.65; background: var(--bg); border: 1px solid var(--line); padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); user-select: text; }
-.out-neg { color: var(--soft); }
-.link { appearance: none; background: none; border: 0; padding: 0; color: var(--accent-text); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; cursor: pointer; }
-.link:hover { color: var(--fg); }
+.label { font-size: 11px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; color: var(--light-grey); }
+.count { font-size: 11.5px; color: var(--grey); font-variant-numeric: tabular-nums; }
+.well { font-family: var(--mono); font-size: 12.5px; line-height: 1.75; color: var(--cream); background: rgba(0, 0, 0, .38); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; box-shadow: inset 0 2px 14px rgba(0, 0, 0, .45); scrollbar-width: thin; }
+.well.neg { color: var(--light-grey); max-height: 140px; }
+.link { border: 0; background: none; padding: 0; color: var(--ember); font-size: 11px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
+.link:hover { color: var(--white); }
 
-.params { display: grid; gap: 12px; }
-.param { display: grid; grid-template-columns: 90px minmax(0, 1fr) 44px; align-items: center; gap: 12px; font-size: 13px; color: var(--soft); }
-.param output { font-family: var(--mono); font-size: 12px; text-align: right; color: var(--fg); }
-.param select { grid-column: 2 / -1; background: var(--bg); border: 1px solid var(--line); padding: 8px 10px; border-radius: 2px; }
-.check { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--soft); cursor: pointer; }
-.check input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; flex: none; }
-.settings { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
-.settings b { color: var(--soft); font-weight: 500; font-family: var(--mono); font-size: 11.5px; }
+.params { display: grid; gap: 10px; }
+.param { display: grid; grid-template-columns: 76px minmax(0, 1fr) 42px; align-items: center; gap: 12px; font-size: 13px; color: var(--light-grey); }
+.param output { font-family: var(--mono); font-size: 12px; text-align: right; color: var(--white); }
+.param select { grid-column: 2 / -1; height: 40px; border-radius: 12px; background: rgba(0, 0, 0, .3); border: 1px solid var(--line-2); padding: 0 12px; }
+.switch { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--light-grey); cursor: pointer; }
+.switch input { appearance: none; -webkit-appearance: none; flex: none; width: 40px; height: 24px; border-radius: 999px; background: rgba(255, 255, 255, .1); border: 1px solid var(--line-2); position: relative; cursor: pointer; transition: background .3s; margin: 0; }
+.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--light-grey); transition: transform .3s var(--ease), background .3s; }
+.switch input:checked { background: var(--fill); border-color: transparent; }
+.switch input:checked::after { transform: translateX(16px); background: #fff; }
+.settings { margin: 0; font-size: 12.5px; color: var(--grey); line-height: 1.55; }
+.settings b { color: var(--light-grey); font-weight: 400; font-family: var(--mono); font-size: 11.5px; }
 
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.btn { appearance: none; font-size: 11.5px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; padding: 12px 16px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; border-radius: 2px; transition: background .15s, border-color .15s; }
-.btn:hover { border-color: var(--muted); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); flex: 1 1 auto; }
-.btn.primary:hover { background: #A9592F; }
-.btn.small { padding: 8px 12px; font-size: 10.5px; }
+.btn { appearance: none; height: 48px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .04); color: var(--white); font-size: 14px; font-weight: 500; letter-spacing: .01em; display: inline-flex; align-items: center; justify-content: center; gap: 9px; cursor: pointer; transition: transform .2s var(--ease), background .3s, box-shadow .3s, border-color .3s; }
+.btn:hover { background: rgba(255, 255, 255, .08); border-color: rgba(232, 226, 217, .3); transform: translateY(-1px); }
+.btn:active { transform: scale(.98); }
+.btn.primary { flex: 1 1 auto; background: var(--fill); border-color: transparent; color: #fff8f2; box-shadow: var(--glow); }
+.btn.primary:hover { box-shadow: 0 16px 36px -12px rgba(214, 110, 58, .95), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.btn.primary.done { background: var(--plum-fill); box-shadow: 0 14px 34px -12px rgba(199, 123, 180, .85), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.btn.small { height: 36px; padding: 0 14px; font-size: 12.5px; }
+.btn svg { flex: none; }
 
 /* Lower sections */
-.lower { display: grid; gap: 56px; margin-top: 64px; }
-.lower-section { border-top: 1px solid var(--line); padding-top: 26px; }
-.series-grid, .fav-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; }
-.card { background: var(--panel); border: 1px solid var(--line); padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.lower { display: grid; gap: 64px; margin-top: 80px; }
+.sec-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.sec-title { font-family: var(--display); font-weight: 300; font-size: clamp(32px, 4vw, 44px); margin: 0; line-height: 1.05; color: var(--white); }
+.sec-hint { font-size: 14px; color: var(--grey); margin: 6px 0 0; max-width: 64ch; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 16px; }
+.card { border-radius: 22px; overflow: hidden; background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .015)); border: 1px solid var(--line); display: grid; align-content: start; min-width: 0; transition: transform .5s var(--ease), box-shadow .5s, border-color .5s; }
+.card:hover { transform: translateY(-4px); border-color: rgba(199, 123, 180, .3); box-shadow: 0 30px 60px -36px rgba(0, 0, 0, .95); }
+.card-img { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--plum-fill); }
+.card-img img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
+.card-img span { position: absolute; left: 14px; top: 14px; height: 26px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 999px; background: rgba(10, 9, 8, .6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--cream); }
+.card-body { padding: 18px 18px 18px; display: grid; gap: 10px; }
 .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.card-title { font-family: var(--display); font-style: italic; font-size: 26px; line-height: 1.05; margin: 0; }
-.card-num { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.card-meta { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-text); margin: 0; }
-.card .out { font-size: 11.5px; max-height: 190px; overflow: auto; }
-.card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.empty { color: var(--muted); font-size: 14px; border: 1px dashed var(--line); padding: 24px; margin: 0; max-width: 62ch; }
+.card-title { font-family: var(--display); font-style: italic; font-weight: 400; font-size: 27px; line-height: 1.05; margin: 0; color: var(--white); }
+.card-num { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--grey); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.card-meta { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ember); margin: 0; }
+.card-prompt { margin: 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.65; color: var(--light-grey); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; }
+.empty { margin: 0; padding: 28px; border-radius: 22px; border: 1px dashed var(--line-2); color: var(--grey); font-size: 14.5px; max-width: 66ch; background: rgba(255, 255, 255, .015); }
 
-.foot { margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.foot { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--grey); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.foot b { color: var(--light-grey); font-weight: 400; letter-spacing: .2em; text-transform: uppercase; font-size: 11px; }
+.foot b i { font-style: normal; color: var(--ember); }
 
 /* Toast */
-.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 8px); background: var(--raise); border: 1px solid var(--line); color: var(--fg); padding: 10px 16px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 20; max-width: calc(100% - 32px); }
+.toast { position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 14px); z-index: 80; background: var(--cream); color: var(--black); padding: 12px 20px; border-radius: 999px; font-size: 14px; font-weight: 500; box-shadow: 0 18px 40px -14px rgba(0, 0, 0, .9); opacity: 0; pointer-events: none; transition: opacity .3s, transform .4s var(--ease); max-width: calc(100% - 32px); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* Phone bar */
 .mbar { display: none; }
 
-@media (max-width: 920px) {
+@media (max-width: 1060px) {
   .bench { grid-template-columns: minmax(0, 1fr); }
-  .sheet { position: static; max-height: none; order: -1; }
-  .mbar { display: flex; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--raise); border-top: 1px solid var(--line); z-index: 10; }
+  .proof { position: static; max-height: none; order: -1; }
+  .proof-art { aspect-ratio: 4 / 3.6; }
+}
+@media (max-width: 760px) {
+  .status span { display: none; }
+  .status { padding: 0 11px; }
+  .brand-div, .brand-app { display: none; }
+  .door-sub { display: none; }
+  .door:hover { flex: 1; }
+  .door[aria-pressed="true"] { flex: 1.5; }
+  .panel { padding: 4px 18px 8px; border-radius: 20px; }
+  .rail-note { display: none; }
+  .mbar { display: flex; gap: 8px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: rgba(10, 9, 8, .82); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--line); }
   .mbar .btn { flex: 1; }
-  .wrap { padding-block: 0 110px; }
-  .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .wrap { padding-block: 0 120px; }
+  .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 560px) {
-  .kinds { width: 100%; }
-  .kind { flex: 1; padding: 11px 12px; }
-  .kind b { font-size: 18px; }
-  .kind span { display: none; }
-}
-@media (max-width: 420px) {
-  .presets { grid-template-columns: 1fr 1fr; }
-  .presets .preset:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .param { grid-template-columns: 74px minmax(0, 1fr) 40px; }
+  .doors { flex-direction: column; height: auto; }
+  .door, .door:hover { flex: none; height: 104px; transition: height .7s var(--ease); }
+  .door[aria-pressed="true"] { flex: none; height: 168px; }
+  .door + .door::before { top: 0; bottom: auto; left: 0; right: 0; width: auto; height: 1px; }
+  .door-title { font-size: 30px; }
+  .door-text::after { margin-top: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .grain { display: none; }
 }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="logo">Signal<b>9</b> Studio</div>
-    <div class="top-note"><i></i>Runs in your browser · No AI tokens used</div>
-  </header>
+<div class="grain" aria-hidden="true"></div>
 
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand">
+      <span class="logo">Signal<b>9</b> Studio</span>
+      <span class="brand-div" aria-hidden="true"></span>
+      <span class="brand-app">Prompt Studio</span>
+    </div>
+    <div class="status"><i></i><span>Works offline · no AI tokens</span></div>
+  </div>
+</header>
+
+<main class="wrap">
   <section class="intro">
-    <p class="eyebrow">Prompt Studio</p>
+    <p class="eyebrow">Tasmania · Limited edition fine art</p>
     <h1>Compose in the <em>Signal9</em> style</h1>
-    <p class="lede">Choose a portrait, a landscape or a building. Start from a work or a studio reference, shape how it transforms and what surrounds it, then copy a prompt written for your image tool. Every prompt is assembled from Signal9's own vocabulary inside this page. Nothing is sent to an AI service.</p>
+    <p class="lede">Choose a subject, start from one of your works, then shape how it fractures, bleeds or blooms. Every prompt is written for your image tool from Signal9's own vocabulary, right here in the page.</p>
   </section>
 
-  <section aria-labelledby="presets-title">
-    <div class="kinds" role="group" aria-label="What are you making?" id="kinds">
-      <button class="kind" type="button" data-kind="portrait" aria-pressed="false"><b>Portrait</b><span>Faces &amp; figures</span></button>
-      <button class="kind" type="button" data-kind="landscape" aria-pressed="false"><b>Landscape</b><span>Land, sea &amp; sky</span></button>
-      <button class="kind" type="button" data-kind="architecture" aria-pressed="false"><b>Architecture</b><span>Buildings &amp; cities</span></button>
-    </div>
-    <div class="sec-head">
-      <h2 class="sec-title" id="presets-title">Start from a work</h2>
-      <p class="sec-hint">Each loads a full look. You can change anything after.</p>
-    </div>
-    <div class="preset-sets" id="presets"></div>
-  </section>
+  <section class="doors" id="kinds" role="group" aria-label="What are you making?"></section>
+
+  <section class="gallery" id="presets" aria-label="Start from a work"></section>
 
   <div class="bench">
     <div class="controls" id="controls"></div>
 
-    <aside class="sheet" id="sheet" aria-label="Your prompt">
-      <div class="proof">
-        <span class="mark tl"></span><span class="mark tr"></span><span class="mark bl"></span><span class="mark br"></span>
-        <div class="proof-art" id="art"><canvas id="study" role="img" aria-label="A rough layout study of the image this prompt describes"></canvas></div>
-        <div class="proof-cap">
-          <div>
-            <p class="eyebrow">Layout study · working title</p>
-            <h2 class="work-title" id="title">Mourning</h2>
-            <p class="edition" id="edition"></p>
+    <aside class="proof" id="sheet" aria-label="Your prompt">
+      <figure class="proof-art">
+        <img id="proofImg" alt="">
+        <figcaption>
+          <span class="proof-label" id="proofLabel">Closest work</span>
+          <span class="proof-work" id="proofWork"></span>
+          <span class="proof-col" id="proofCol"></span>
+        </figcaption>
+      </figure>
+
+      <div class="proof-body">
+        <div>
+          <div class="title-row">
+            <div>
+              <p class="eyebrow">Working title</p>
+              <h2 class="work-title" id="title">Mourning</h2>
+            </div>
+            <button class="round" id="retitle" type="button" title="New working title" aria-label="New working title">
+              <svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.46-3.54M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
           </div>
-          <button class="icon-btn" id="retitle" type="button" title="New working title" aria-label="New working title">
-            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.46-3.54M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="tags" id="tags"></div>
+        </div>
+
+        <div class="seg" role="tablist" aria-label="Image tool" id="tabs">
+          <button role="tab" type="button" data-fmt="mj">Midjourney</button>
+          <button role="tab" type="button" data-fmt="sd">SD / SDXL</button>
+          <button role="tab" type="button" data-fmt="flux">Flux</button>
+          <button role="tab" type="button" data-fmt="nat">DALL·E +</button>
+        </div>
+
+        <div class="field">
+          <div class="field-head"><span class="label">Prompt</span><span class="count" id="count"></span></div>
+          <div class="well" id="out" tabindex="0"></div>
+        </div>
+
+        <div class="field" id="negWrap">
+          <div class="field-head"><span class="label">Negative prompt</span><button class="link" type="button" id="copyNeg">Copy</button></div>
+          <div class="well neg" id="neg" tabindex="0"></div>
+        </div>
+
+        <div class="params">
+          <label class="param"><span>Aspect</span><select id="ar"></select></label>
+          <div class="params" id="mjParams">
+            <label class="param"><span>Stylize</span><input type="range" id="stylize" min="0" max="1000" step="25"><output id="stylizeOut"></output></label>
+            <label class="param"><span>Chaos</span><input type="range" id="chaos" min="0" max="100" step="1"><output id="chaosOut"></output></label>
+            <label class="switch"><input type="checkbox" id="raw"> Raw style, for photographic work</label>
+          </div>
+        </div>
+
+        <p class="settings" id="settings"></p>
+
+        <div class="actions">
+          <button class="btn primary" type="button" id="copy"></button>
+          <button class="btn" type="button" id="save" title="Save to your prompts">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M4 2.5h8v11l-4-3-4 3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>Save
+          </button>
+          <button class="btn" type="button" id="rand" title="Randomise unlocked choices">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="5.6" cy="5.6" r="1" fill="currentColor"/><circle cx="10.4" cy="10.4" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/></svg>Shuffle
           </button>
         </div>
-      </div>
-
-      <div class="tabs" role="tablist" aria-label="Image tool" id="tabs">
-        <button class="tab" role="tab" type="button" data-fmt="mj">Midjourney</button>
-        <button class="tab" role="tab" type="button" data-fmt="sd">Stable Diffusion</button>
-        <button class="tab" role="tab" type="button" data-fmt="flux">Flux</button>
-        <button class="tab" role="tab" type="button" data-fmt="nat">DALL·E &amp; others</button>
-      </div>
-
-      <div class="field">
-        <div class="field-head"><span class="label">Prompt</span><span class="count" id="count"></span></div>
-        <div class="out" id="out" tabindex="0"></div>
-      </div>
-
-      <div class="field" id="negWrap">
-        <div class="field-head"><span class="label">Negative prompt</span><button class="link" type="button" id="copyNeg">Copy</button></div>
-        <div class="out out-neg" id="neg" tabindex="0"></div>
-      </div>
-
-      <div class="params">
-        <label class="param"><span>Aspect</span><select id="ar"></select></label>
-        <div class="params" id="mjParams">
-          <label class="param"><span>Stylize</span><input type="range" id="stylize" min="0" max="1000" step="25"><output id="stylizeOut"></output></label>
-          <label class="param"><span>Chaos</span><input type="range" id="chaos" min="0" max="100" step="1"><output id="chaosOut"></output></label>
-          <label class="check"><input type="checkbox" id="raw"> Raw style (more photographic, less Midjourney polish)</label>
-        </div>
-      </div>
-
-      <p class="settings" id="settings"></p>
-
-      <div class="actions">
-        <button class="btn primary" type="button" id="copy">Copy prompt</button>
-        <button class="btn" type="button" id="save">Save</button>
-        <button class="btn" type="button" id="rand">Randomise</button>
       </div>
     </aside>
   </div>
 
   <div class="lower">
-    <section class="lower-section" aria-labelledby="series-title">
+    <section aria-labelledby="series-title">
       <div class="sec-head">
         <div>
           <h2 class="sec-title" id="series-title">Build a series</h2>
-          <p class="sec-hint">Five related works. Palette, setting and finish stay the same; viewpoint, transformation and intensity shift. Locked sections stay fixed.</p>
+          <p class="sec-hint">Five related works. Palette, setting and finish hold steady; viewpoint, transformation and intensity shift. Locked choices stay fixed.</p>
         </div>
-        <button class="btn" type="button" id="makeSeries">Generate five</button>
+        <button class="btn primary" type="button" id="makeSeries" style="flex:none">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M2 3h5v5H2zM9 3h5v5H9zM2 10h5v3H2zM9 10h5v3H9z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>Generate five
+        </button>
       </div>
-      <div class="series-grid" id="series"></div>
+      <div class="cards" id="series"></div>
     </section>
 
-    <section class="lower-section" aria-labelledby="fav-title">
+    <section aria-labelledby="fav-title">
       <div class="sec-head">
         <div>
           <h2 class="sec-title" id="fav-title">Saved prompts</h2>
@@ -323,20 +414,20 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
         </div>
         <button class="btn small" type="button" id="copyAllFavs">Copy all</button>
       </div>
-      <div class="fav-grid" id="favs"></div>
+      <div class="cards" id="favs"></div>
     </section>
   </div>
 
   <footer class="foot">
-    <span>Signal9 Studio · Tasmania</span>
+    <b>Signal<i>9</i> Studio · Tasmania</b>
     <span>Prompts for Midjourney v7, SDXL, Flux, DALL·E, Firefly and Ideogram</span>
   </footer>
-</div>
+</main>
 
-<div class="mbar">
-  <button class="btn" type="button" id="mRand">Randomise</button>
+<nav class="mbar" aria-label="Quick actions">
+  <button class="btn" type="button" id="mRand">Shuffle</button>
   <button class="btn primary" type="button" id="mCopy">Copy prompt</button>
-</div>
+</nav>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -349,9 +440,17 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     { id: 'quiet', l: 'Quiet Fracture', p: 'deep crimson red, matte black and pale porcelain', sw: ['#8E1B1B', '#121111', '#E9DED3'], tones: ['crimson', 'black'] },
     { id: 'ember', l: 'Ember', p: 'burnt copper, smouldering orange and ash black', sw: ['#9B4F2A', '#D9772E', '#1A1716'], tones: ['burnt copper', 'ash-black'] },
     { id: 'bone', l: 'Bone', p: 'ivory, bone white and charcoal, almost monochrome', sw: ['#EFE8DA', '#C9BFAE', '#2B2928'], tones: ['ivory', 'charcoal'] },
-    { id: 'verdigris', l: 'Verdigris', p: 'oxidised teal, rust and slate grey', sw: ['#3F7A72', '#8C4A2F', '#4A5056'], tones: ['teal', 'rust'] },
-    { id: 'nocturne', l: 'Nocturne', p: 'ink blue, cold silver and deep black', sw: ['#1D2B4A', '#A9B1BC', '#0B0C10'], tones: ['ink-blue', 'black'] },
+    { id: 'sepia', l: 'Sepia archive', p: 'sepia, umber and ink black on warm white', sw: ['#B98A5E', '#5B4636', '#F2ECE2'], tones: ['sepia', 'umber'] },
+    { id: 'vivid', l: 'Vivid tiles', p: 'saturated orange, cobalt blue, red and teal', sw: ['#F07A1A', '#2459A8', '#D23A2E'], tones: ['orange', 'cobalt'] },
+    { id: 'lilac', l: 'Lilac frost', p: 'icy pale blue skin with lilac and lavender', sw: ['#C9D8E0', '#B49AC9', '#6E5A8A'], tones: ['lilac', 'pale blue'] },
+    { id: 'plum', l: 'Plum', p: 'violet, plum and magenta against black', sw: ['#6B2E8F', '#B04FA6', '#120A16'], tones: ['violet', 'plum'] },
+    { id: 'celestial', l: 'Celestial', p: 'deep space black, ocean blue and molten orange', sw: ['#0A0D18', '#2F6FB0', '#E2722C'], tones: ['ocean blue', 'molten orange'] },
+    { id: 'zen', l: 'Zen garden', p: 'ink black, soft grey and vermilion red on rice paper', sw: ['#D8432F', '#2B2B2B', '#F4EFE6'], tones: ['vermilion', 'ink grey'] },
+    { id: 'wash', l: 'Watercolour wash', p: 'soft lavender, sky blue and warm peach washes on white', sw: ['#B9A7D6', '#8DB4D9', '#F2B48A'], tones: ['lavender', 'sky blue'] },
+    { id: 'nightcity', l: 'Rain-soaked night', p: 'deep cobalt blue with amber and orange street light', sw: ['#1E3A6E', '#F29A2E', '#0E1420'], tones: ['cobalt', 'amber'] },
     { id: 'gilded', l: 'Gilded', p: 'black and burnished gold leaf with warm ivory', sw: ['#0E0D0C', '#B8913A', '#E8D9BF'], tones: ['gold', 'black'] },
+    { id: 'nocturne', l: 'Nocturne', p: 'ink blue, cold silver and deep black', sw: ['#1D2B4A', '#A9B1BC', '#0B0C10'], tones: ['ink-blue', 'black'] },
+    { id: 'verdigris', l: 'Verdigris', p: 'oxidised teal, rust and slate grey', sw: ['#3F7A72', '#8C4A2F', '#4A5056'], tones: ['teal', 'rust'] },
     { id: 'sunset', l: 'Sunset bloom', p: 'coral, saffron and tangerine bleeding into teal and indigo', sw: ['#E8664A', '#F2A93B', '#2F6E7E'], tones: ['coral', 'teal'] },
     { id: 'blush', l: 'Blush paper', p: 'black and white with soft blush pink and peach accents', sw: ['#F2C4B0', '#E58FA0', '#2A2A2A'], tones: ['blush', 'grey'] },
     { id: 'poppy', l: 'Poppy', p: 'burnt orange, magenta pink and charcoal on pale grey', sw: ['#E0602A', '#D2557A', '#3A3434'], tones: ['orange', 'pink'] },
@@ -369,14 +468,16 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 
   const GROUPS = {
     // Portrait
-    subject: { title: 'Subject', hint: 'Who the portrait is of', type: 'one', kinds: ['portrait'], opts: [
+    subject: { title: 'Subject', hint: 'Who the portrait is of', type: 'one', opts: [
       { id: 'woman', l: 'Woman', p: 'a young woman' },
       { id: 'man', l: 'Man', p: 'a young man' },
       { id: 'andro', l: 'Androgynous', p: 'an androgynous figure' },
       { id: 'olderw', l: 'Older woman', p: 'an older woman with fine lines' },
-      { id: 'olderm', l: 'Older man', p: 'an older man with a weathered face' }
+      { id: 'olderm', l: 'Older man', p: 'an older man with a weathered face' },
+      { id: 'hooded', l: 'Hooded figure', p: 'a woman wrapped in a heavy black hood' },
+      { id: 'bust', l: 'Porcelain bust', p: 'a sculpted porcelain bust of a woman crowned with branching growths' }
     ]},
-    pose: { title: 'Pose', hint: 'How the head sits in the frame', type: 'one', kinds: ['portrait'], opts: [
+    pose: { title: 'Pose', hint: 'How the head sits in the frame', type: 'one', opts: [
       { id: 'profileR', l: 'Profile, right', p: 'in strict profile facing right' },
       { id: 'profileL', l: 'Profile, left', p: 'in strict profile facing left' },
       { id: 'three', l: 'Three-quarter', p: 'in a three-quarter view' },
@@ -385,7 +486,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       { id: 'bowed', l: 'Head bowed', p: 'with the head bowed forward' },
       { id: 'wind', l: 'Hair in the wind', p: 'with long hair swept sideways by the wind, the strands turning into fine ink lines' }
     ]},
-    expression: { title: 'Expression', hint: 'Turned inward, between surrender and transcendence', type: 'one', kinds: ['portrait'], opts: [
+    expression: { title: 'Expression', hint: 'Turned inward, between surrender and transcendence', type: 'one', opts: [
       { id: 'serene', l: 'Eyes closed, serene', p: 'eyes closed, serene and turned inward' },
       { id: 'grief', l: 'Eyes closed, grieving', p: 'eyes closed, brow faintly drawn in quiet grief' },
       { id: 'lowered', l: 'Gaze lowered', p: 'gaze lowered, lost in thought' },
@@ -394,38 +495,49 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       { id: 'direct', l: 'Direct gaze', p: 'meeting the viewer with a calm, steady gaze' }
     ]},
     // Landscape
-    scene: { title: 'Scene', hint: 'The land itself', type: 'one', kinds: ['landscape'], opts: [
+    scene: { title: 'Scene', hint: 'The land itself', type: 'one', opts: [
+      { id: 'garden', l: 'Zen garden', p: 'a quiet zen garden of weathered rocks and flowering branches' },
+      { id: 'river', l: 'Misty river valley', p: 'misty mountain peaks above a winding river' },
+      { id: 'planet', l: 'Planet in space', p: 'the planet Earth hanging in deep space' },
+      { id: 'island', l: 'Floating island', p: 'a small rocky island floating in mist' },
       { id: 'coast', l: 'Sea cliffs', p: 'towering dolerite sea cliffs above a dark ocean' },
       { id: 'forest', l: 'Old-growth forest', p: 'an ancient rainforest of moss-covered myrtle trees' },
       { id: 'mountain', l: 'Mountain range', p: 'a jagged mountain range' },
       { id: 'hills', l: 'Distant hills', p: 'low rolling hills beneath a wide sky' },
       { id: 'plains', l: 'Highland plains', p: 'open buttongrass plains' },
       { id: 'meadow', l: 'Wildflower meadow', p: 'a meadow of tall wild daisies' },
-      { id: 'saltflat', l: 'Salt flat', p: 'a vast cracked salt flat' },
       { id: 'lake', l: 'Still lake', p: 'a still glacial lake' },
       { id: 'shore', l: 'Rocky shore', p: 'a kelp-strewn rocky shoreline' }
     ]},
-    lview: { title: 'Viewpoint', hint: 'Where we stand', type: 'one', kinds: ['landscape'], opts: [
+    lview: { title: 'Viewpoint', hint: 'Where we stand', type: 'one', opts: [
+      { id: 'branch', l: 'Framed by a branch', p: 'framed by a flowering branch in the foreground' },
       { id: 'vista', l: 'Wide vista', p: 'seen as a sweeping wide vista' },
       { id: 'low', l: 'Low horizon', p: 'with a low horizon and a towering sky' },
-      { id: 'foreground', l: 'Flowers up close', p: 'with delicate wildflowers rising tall in the foreground' },
+      { id: 'foreground', l: 'Flowers up close', p: 'with delicate flowers rising tall in the foreground' },
       { id: 'ground', l: 'Ground level', p: 'from ground level, the foreground filling the frame' },
       { id: 'aerial', l: 'From above', p: 'seen from directly above' },
-      { id: 'lone', l: 'A lone form', p: 'centred on a single bare tree' }
+      { id: 'lone', l: 'A lone tree', p: 'centred on a single solitary tree' }
     ]},
     // Architecture
-    building: { title: 'Building', hint: 'What stands in the frame', type: 'one', kinds: ['architecture'], opts: [
+    building: { title: 'Building', hint: 'What stands in the frame', type: 'one', opts: [
+      { id: 'empire', l: 'Empire State', p: 'the Empire State Building rising above Manhattan' },
+      { id: 'manhattan', l: 'Manhattan civic', p: 'the civic towers and plazas of lower Manhattan' },
+      { id: 'eiffel', l: 'Eiffel Tower', p: 'the Eiffel Tower above autumn Paris' },
+      { id: 'westminster', l: 'Westminster', p: 'the Palace of Westminster and its clock tower beside the Thames' },
+      { id: 'tokyo', l: 'Tokyo & Fuji', p: 'the Tokyo skyline with Mount Fuji rising behind' },
+      { id: 'street', l: 'City street', p: 'a deep city street canyon between tall buildings' },
+      { id: 'skyline', l: 'City skyline', p: 'a dense city skyline of old skyscrapers and spires' },
+      { id: 'floatingcity', l: 'Floating city', p: 'a city skyline floating on a torn slab of earth' },
       { id: 'farmhouse', l: 'Weathered farmhouse', p: 'a weathered white farmhouse with a tin roof and brick chimney' },
       { id: 'cottage', l: 'Sandstone cottage', p: 'an abandoned colonial sandstone cottage' },
       { id: 'modern', l: 'Modern concrete house', p: 'a modernist concrete house with a cantilevered roof' },
-      { id: 'skyline', l: 'City skyline', p: 'a dense city skyline of old skyscrapers and spires' },
       { id: 'cathedral', l: 'Cathedral', p: 'a gothic cathedral' },
-      { id: 'brutalist', l: 'Brutalist tower', p: 'a brutalist concrete tower' },
       { id: 'lighthouse', l: 'Lighthouse', p: 'a lone lighthouse on a headland' },
-      { id: 'chapel', l: 'Ruined chapel', p: 'a roofless ruined chapel' },
       { id: 'bridge', l: 'Stone bridge', p: 'an old convict-built stone bridge' }
     ]},
-    aview: { title: 'Viewpoint', hint: 'How we see it', type: 'one', kinds: ['architecture'], opts: [
+    aview: { title: 'Viewpoint', hint: 'How we see it', type: 'one', opts: [
+      { id: 'isometric', l: 'Isometric vignette', p: 'drawn as a detailed isometric vignette' },
+      { id: 'street', l: 'Street level', p: 'from street level, looking down the avenue' },
       { id: 'facade', l: 'Facade, straight on', p: 'seen straight on, a symmetrical facade' },
       { id: 'section', l: 'Cross-section', p: 'shown as an architectural cross-section with the rooms opened up' },
       { id: 'elevated', l: 'High vantage', p: 'from a high vantage point' },
@@ -435,23 +547,32 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       { id: 'reflection', l: 'Reflected', p: 'mirrored in still water below' }
     ]},
     // Landscape + architecture
-    weather: { title: 'Time & weather', hint: 'The air around it', type: 'one', kinds: ['landscape', 'architecture'], opts: [
+    weather: { title: 'Time & weather', hint: 'The air around it', type: 'one', opts: [
       { id: 'overcast', l: 'Still overcast', p: 'under a still, pale overcast' },
       { id: 'dawn', l: 'Dawn mist', p: 'at dawn, wrapped in mist' },
+      { id: 'redsun', l: 'Red sun', p: 'beneath a large red sun' },
       { id: 'clear', l: 'Sunset', p: 'at sunset' },
+      { id: 'rain', l: 'Rainy night', p: 'on a rain-soaked night, street lights reflected in the wet road' },
       { id: 'storm', l: 'Storm light', p: 'under breaking storm light' },
       { id: 'dusk', l: 'Last light', p: 'in the last light of dusk' },
-      { id: 'night', l: 'Night', p: 'at night under faint moonlight' },
+      { id: 'night', l: 'Night', p: 'at night' },
       { id: 'snow', l: 'Snowfall', p: 'in quiet falling snow' }
     ]},
     // Shared
-    fracture: { title: 'How it transforms', hint: 'What it breaks, bleeds or grows into · up to three', type: 'many', max: 3, kinds: ALL, opts: [
+    fracture: { title: 'How it transforms', hint: 'What it breaks, bleeds or grows into · up to three', type: 'many', max: 3, opts: [
       { id: 'mosaic', l: 'Square collage tiles', p: 'overlapping square collage tiles' },
+      { id: 'pixels', l: 'Colour squares', p: 'dispersing squares of saturated colour' },
+      { id: 'photofrag', l: 'Photo fragments', p: 'fragments of old photographs' },
+      { id: 'geometric', l: 'Geometric planes', p: 'translucent geometric planes' },
+      { id: 'filigree', l: 'Carved filigree', p: 'intricately carved filigree patterns' },
       { id: 'watercolour', l: 'Watercolour bloom', p: 'soft blooms of bleeding watercolour' },
       { id: 'drips', l: 'Ink drips', p: 'long drips of running ink' },
       { id: 'inklines', l: 'Ink-line strands', p: 'loose strands of fine ink linework' },
       { id: 'splatter', l: 'Paint splatter', p: 'bursts of paint splatter' },
       { id: 'flowers', l: 'Blooming flowers', p: 'blooming poppies and wild daisies' },
+      { id: 'blossom', l: 'Cherry blossom', p: 'drifting cherry blossom petals' },
+      { id: 'leaves', l: 'Autumn leaves', p: 'curling bronze autumn leaves' },
+      { id: 'cosmos', l: 'Cosmic light', p: 'cracks glowing with nebula light and stars' },
       { id: 'buildings', l: 'Miniature buildings', p: 'stacked miniature buildings and rooms' },
       { id: 'blueprint', l: 'Blueprint lines', p: 'architectural blueprint linework' },
       { id: 'paper', l: 'Torn paper', p: 'ragged layers of torn paper' },
@@ -466,10 +587,10 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       { id: 'ash', l: 'Ash & ember', p: 'ash-edged, ember-lit flakes' },
       { id: 'kintsugi', l: 'Kintsugi seams', p: 'gold-seamed kintsugi fragments' }
     ]},
-    materials: { title: 'Materials & ephemera', hint: 'What the layers are made of · up to three', type: 'many', max: 3, kinds: ALL, opts: [
+    materials: { title: 'Materials & ephemera', hint: 'What the layers are made of · up to three', type: 'many', max: 3, opts: [
+      { id: 'photos', l: 'Faded photographs', p: 'faded photographs' },
       { id: 'sheetmusic', l: 'Sheet music', p: 'torn sheet music' },
       { id: 'newsprint', l: 'Newspaper scraps', p: 'old newspaper scraps' },
-      { id: 'photos', l: 'Faded photographs', p: 'faded photographs' },
       { id: 'thread', l: 'Embroidered thread', p: 'embroidered thread and felt' },
       { id: 'concrete', l: 'Stained concrete', p: 'stained raw concrete' },
       { id: 'lacquer', l: 'Black lacquer', p: 'glossy black lacquer' },
@@ -484,37 +605,40 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       { id: 'lace', l: 'Black lace', p: 'fine black lace' },
       { id: 'charcoal', l: 'Charcoal', p: 'smudged charcoal dust' }
     ]},
-    palette: { title: 'Palette', hint: 'The colour world of the piece', type: 'one', kinds: ALL, opts: PALETTES },
-    colour: { title: 'Colour treatment', hint: 'Where the colour lives', type: 'one', kinds: ALL, opts: [
+    palette: { title: 'Palette', hint: 'The colour world of the piece', type: 'one', opts: PALETTES },
+    colour: { title: 'Colour treatment', hint: 'Where the colour lives', type: 'one', opts: [
       { id: 'full', l: 'Full colour', p: '' },
       { id: 'selective', l: 'Subject in black & white', p: 'the subject rendered in black and white, colour only in the surrounding layers' },
       { id: 'mono', l: 'Near monochrome', p: 'almost entirely monochrome, with colour used sparingly' }
     ]},
-    background: { title: 'Background & ground', hint: 'What sits behind it, or the surface it is made on', type: 'one', kinds: ALL, opts: [
+    background: { title: 'Background & ground', hint: 'What sits behind it, or the surface it is made on', type: 'one', opts: [
       { id: 'white', l: 'White paper', k: ALL, p: () => 'clean white watercolour paper with wide negative space' },
+      { id: 'rice', l: 'Rice paper', k: ALL, p: () => 'soft textured rice paper' },
       { id: 'parchment', l: 'Aged parchment', k: ALL, p: () => 'aged, tea-stained parchment' },
       { id: 'linen', l: 'Grey linen', k: ALL, p: () => 'textured pale grey linen canvas' },
+      { id: 'void', l: 'Black void', k: ALL, p: (t, kind) => kind === 'portrait' ? 'a deep, empty black void' : 'a deep black void, isolated and floating' },
+      { id: 'space', l: 'Deep space', k: ALL, p: () => 'deep space scattered with distant stars' },
       { id: 'sheetmusic', l: 'Sheet music', k: ['portrait'], p: () => 'pages of old, stained sheet music' },
       { id: 'mosaic', l: 'Two-tone grid', k: ALL, p: (t, kind) => kind === 'portrait' ? `a backdrop of ${t[0]} and ${t[1]} squares in an uneven grid` : `a sky broken into ${t[0]} and ${t[1]} squares in an uneven grid` },
       { id: 'collage', l: 'Torn collage', k: ['portrait', 'architecture'], p: () => 'a wall of torn collage panels and faded photographs' },
-      { id: 'void', l: 'Black void', k: ALL, p: (t, kind) => kind === 'portrait' ? 'a deep, empty black void' : 'a deep black void, isolated and floating' },
-      { id: 'plaster', l: 'Cracked plaster', k: ['portrait'], p: () => 'a cracked and peeling plaster wall' },
       { id: 'drift', l: 'Drifting fragments', k: ALL, p: () => 'darkness filled with drifting fragments' },
+      { id: 'plaster', l: 'Cracked plaster', k: ['portrait'], p: () => 'a cracked and peeling plaster wall' },
       { id: 'smoke', l: 'Smoke', k: ['portrait', 'architecture'], p: () => 'slow curls of smoke in darkness' },
       { id: 'clouds', l: 'Storm clouds', k: ['landscape', 'architecture'], p: () => 'low, heavy storm clouds' },
       { id: 'fog', l: 'Heavy fog', k: ['landscape', 'architecture'], p: () => 'thick white fog swallowing the distance' },
-      { id: 'night', l: 'Night sky', k: ['landscape', 'architecture'], p: () => 'a black night sky scattered with faint stars' },
+      { id: 'night', l: 'Night sky', k: ['landscape', 'architecture'], p: () => 'a deep blue night sky' },
       { id: 'haze', l: 'Ember haze', k: ['landscape', 'architecture'], p: () => 'a sky of glowing ember haze' }
     ]},
-    composition: { title: 'Composition', hint: 'How the image is laid out', type: 'one', kinds: ALL, opts: [
+    composition: { title: 'Composition', hint: 'How the image is laid out', type: 'one', opts: [
       { id: 'full', l: 'Full bleed', p: 'full bleed, edge to edge' },
       { id: 'float', l: 'Floating in white space', p: 'floating in wide, empty negative space' },
+      { id: 'vignette', l: 'Vignette fading to paper', p: 'as a vignette whose edges dissolve into bare paper' },
       { id: 'cutaway', l: 'Horizon line, dripping below', p: 'on a single horizon line, with a cut-away section below that dissolves into drips and stains' },
       { id: 'panels', l: 'Vertical colour panels', p: 'over tall vertical panels of colour' },
       { id: 'tiles', l: 'Tile grid', p: 'over an irregular grid of overlapping square panels' },
       { id: 'split', l: 'Calm above, broken below', p: 'in two halves, calm above and broken into dark panels below' }
     ]},
-    overlays: { title: 'Overlays', hint: 'Graphic marks laid over the top · up to four', type: 'many', max: 4, kinds: ALL, opts: [
+    overlays: { title: 'Overlays', hint: 'Graphic marks laid over the top · up to four', type: 'many', max: 4, opts: [
       { id: 'lines', l: 'Vertical hairlines', p: 'thin vertical red and black hairlines' },
       { id: 'drawings', l: 'Technical drawings', p: 'faint technical drawing fragments' },
       { id: 'text', l: 'Text fragments', p: 'small scattered blocks of illegible text' },
@@ -522,29 +646,35 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       { id: 'sun', l: 'Flat sun disc', p: 'a large flat sun disc' },
       { id: 'splatter', l: 'Ink splatter', p: 'fine ink splatter' },
       { id: 'registration', l: 'Registration marks', p: 'thin printer registration marks' },
-      { id: 'gold', l: 'Gold seams', p: 'thin gold seams between panels' }
+      { id: 'gold', l: 'Gold seams', p: 'thin gold seams between panels' },
+      { id: 'seal', l: 'Red artist seal', p: 'a small red artist seal stamp' }
     ]},
-    lighting: { title: 'Lighting', hint: 'Where the light falls', type: 'one', kinds: ALL, opts: [
+    lighting: { title: 'Lighting', hint: 'Where the light falls', type: 'one', opts: [
       { id: 'even', l: 'Even studio light', p: 'soft, even light with gentle shadows' },
+      { id: 'soft', l: 'Soft diffused', p: 'soft, diffused light' },
       { id: 'chiaro', l: 'Chiaroscuro', p: 'dramatic low-key chiaroscuro lighting' },
       { id: 'rembrandt', l: 'Rembrandt', p: 'soft Rembrandt lighting with deep falloff into shadow' },
       { id: 'rim', l: 'Rim light', p: 'a single cold rim light tracing the edges' },
-      { id: 'soft', l: 'Soft diffused', p: 'soft, diffused light' },
       { id: 'below', l: 'Glow from below', p: 'a warm glow rising from below' },
-      { id: 'interior', l: 'Warm interior glow', p: 'a warm amber glow spilling from inside' },
+      { id: 'interior', l: 'Warm glow inside', p: 'warm amber light spilling from windows and doorways' },
       { id: 'spot', l: 'Overhead spot', p: 'a narrow overhead spotlight in darkness' }
     ]},
-    render: { title: 'Medium', hint: 'How the image is made', type: 'one', kinds: ALL, opts: [
+    render: { title: 'Medium', hint: 'How the image is made', type: 'one', opts: [
+      { id: 'photo', l: 'Fine-art photo', p: kind => kind === 'portrait' ? 'hyperrealistic fine-art portrait photograph' : 'hyperrealistic fine-art photograph' },
       { id: 'mixed', l: 'Mixed media', p: 'mixed-media artwork combining realistic rendering, watercolour, ink and collage' },
+      { id: 'archwc', l: 'Pen, ink & watercolour', p: 'pen, ink and watercolour architectural illustration' },
+      { id: 'sumi', l: 'Sumi-e ink wash', p: 'traditional Japanese sumi-e ink wash painting with soft watercolour accents' },
+      { id: 'oilmedia', l: 'Mixed-media oil', p: 'stylised mixed-media oil painting with thick, glossy brushwork' },
+      { id: 'sculpture', l: 'Carved sculpture', p: 'hyperrealistic carved porcelain sculpture' },
       { id: 'inkwash', l: 'Ink & watercolour', p: 'ink and watercolour illustration with loose pen linework' },
       { id: 'collagebw', l: 'B&W photo collage', p: 'black-and-white photographic collage with paper cut-outs' },
       { id: 'impasto', l: 'Textured panels', p: 'textured mixed-media painting with impasto acrylic and metallic leaf' },
       { id: 'textile', l: 'Textile & thread', p: 'textile artwork of embroidered thread and felt over a watercolour wash' },
-      { id: 'photo', l: 'Fine-art photo', p: kind => kind === 'portrait' ? 'hyperrealistic fine-art portrait photograph' : 'hyperrealistic fine-art photograph' },
+      { id: 'ukiyo', l: 'Ukiyo-e print', p: 'ukiyo-e Japanese woodblock print' },
       { id: 'painting', l: 'Digital painting', p: 'highly detailed digital painting' },
       { id: 'oil', l: 'Oil painting', p: 'oil painting with visible, layered brushwork' }
     ]},
-    lens: { title: 'Camera & focus', hint: 'Choose “Not a photo” for illustration and collage', type: 'one', kinds: ALL, opts: [
+    lens: { title: 'Camera & focus', hint: 'Choose “Not a photo” for paintings, ink and collage', type: 'one', opts: [
       { id: 'none', l: 'Not a photo', p: '' },
       { id: 'p85', l: '85mm portrait', p: '85mm portrait lens, shallow depth of field' },
       { id: 'macro', l: 'Macro detail', p: '100mm macro lens, extreme surface detail' },
@@ -554,7 +684,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       { id: 'tilt', l: 'Tilt-shift', p: 'tilt-shift lens, straight vertical lines' },
       { id: 'long', l: 'Telephoto', p: '200mm telephoto, compressed distance' }
     ]},
-    mood: { title: 'Mood', hint: 'Up to three', type: 'many', max: 3, kinds: ALL, opts: [
+    mood: { title: 'Mood', hint: 'Up to three', type: 'many', max: 3, opts: [
       { id: 'stillness', l: 'Stillness before collapse', p: 'stillness before collapse' },
       { id: 'surrender', l: 'Quiet surrender', p: 'quiet surrender' },
       { id: 'transcendence', l: 'Transcendence', p: 'transcendence' },
@@ -596,11 +726,16 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
   const KIND_HEAD = { portrait: 'The figure', landscape: 'The land', architecture: 'The building' };
   const KIND_GROUPS = { portrait: ['subject', 'pose', 'expression'], landscape: ['scene', 'lview', 'weather'], architecture: ['building', 'aview', 'weather'] };
   const SERIES_VARY = { portrait: ['pose', 'expression'], landscape: ['lview', 'weather'], architecture: ['aview', 'weather'] };
-  const DEFAULT_BG = { portrait: 'void', landscape: 'clouds', architecture: 'fog' };
+  const DEFAULT_BG = { portrait: 'void', landscape: 'rice', architecture: 'white' };
+  const DOORS = {
+    portrait: { img: 'mourning', sub: 'Faces, figures and the fracture' },
+    landscape: { img: 'mountain-passage', sub: 'Gardens, planets and open land' },
+    architecture: { img: 'empire-rain', sub: 'Cities, landmarks and streets' }
+  };
   const NOTE_HINT = {
     portrait: 'e.g. a single pearl earring, damp hair swept back',
-    landscape: 'e.g. a single dead tree on the ridge, a flock of birds',
-    architecture: 'e.g. one lit window, ivy across the door'
+    landscape: 'e.g. a lone crane in flight, a small red bridge',
+    architecture: 'e.g. a yellow taxi, a lone figure with an umbrella'
   };
 
   const TITLES = ['Hollowed', 'Severed', 'Unspoken', 'Dormant', 'Kept', 'Yielding', 'Remnant', 'Undone', 'Hushed', 'Splintered',
@@ -616,51 +751,106 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     other: 'lowres, blurry, jpeg artifacts, people, distorted perspective, warped lines, cartoon, anime, oversaturated, readable text, watermark, signature, frame, border'
   };
 
-  // Every preset is a full look. Unlisted keys fall back to BASE.
+  // Each preset is one of the studio's own works, with the look it was made in.
   const PRESETS = [
-    { id: 'mourning', kind: 'portrait', col: 'The Quiet Fracture', name: 'Mourning', meta: 'Filigree · Void · Breaking',
-      set: { pose: 'close', expression: 'serene', render: 'photo', lens: 'p85', fracture: ['lacquer'], materials: ['lacquer', 'filigree', 'beads'], palette: 'quiet', colour: 'full', background: 'void', composition: 'full', overlays: [], lighting: 'rembrandt', mood: ['grief', 'stillness'], intensity: 3 } },
-    { id: 'contained', kind: 'portrait', col: 'The Quiet Fracture', name: 'Contained', meta: 'Petals · Lace · Breaking',
-      set: { pose: 'profileR', expression: 'serene', render: 'photo', lens: 'p85', fracture: ['petals', 'shards'], materials: ['lacquer', 'rose', 'lace'], palette: 'quiet', colour: 'full', background: 'drift', composition: 'full', overlays: [], lighting: 'chiaro', mood: ['composure', 'surrender'], intensity: 3 } },
-    { id: 'fractured', kind: 'portrait', col: 'The Quiet Fracture', name: 'Fractured', meta: 'Tiles · Grid · Overtaken',
-      set: { pose: 'profileR', expression: 'serene', render: 'photo', lens: 'p85', fracture: ['mosaic', 'shards'], materials: ['obsidian', 'lacquer'], palette: 'quiet', colour: 'full', background: 'mosaic', composition: 'full', overlays: [], lighting: 'rim', mood: ['stillness'], intensity: 4 } },
-    { id: 'torn', kind: 'portrait', col: 'The Quiet Fracture', name: 'Torn', meta: 'Paper · Collage · Overtaken',
-      set: { pose: 'profileR', expression: 'grief', render: 'photo', lens: 'p85', fracture: ['paper', 'shards'], materials: ['lacquer', 'charcoal'], palette: 'quiet', colour: 'full', background: 'collage', composition: 'full', overlays: [], lighting: 'chiaro', mood: ['endurance', 'grief'], intensity: 4 } },
-    { id: 'withered', kind: 'portrait', col: 'The Quiet Fracture', name: 'Withered', meta: 'Petals · Ash · Dissolving',
-      set: { pose: 'profileR', expression: 'serene', render: 'photo', lens: 'p85', fracture: ['petals', 'shards', 'ash'], materials: ['lacquer', 'rose', 'beads'], palette: 'quiet', colour: 'full', background: 'drift', composition: 'full', overlays: [], lighting: 'chiaro', mood: ['transcendence', 'surrender'], intensity: 5 } },
+    // Portrait · The Quiet Fracture
+    { id: 'mourning', kind: 'portrait', col: 'The Quiet Fracture', name: 'Mourning', meta: 'Filigree · Black void',
+      set: { pose: 'close', expression: 'serene', render: 'photo', lens: 'p85', fracture: ['lacquer'], materials: ['lacquer', 'filigree', 'beads'], palette: 'quiet', background: 'void', lighting: 'rembrandt', mood: ['grief', 'stillness'], intensity: 3 } },
+    { id: 'contained', kind: 'portrait', col: 'The Quiet Fracture', name: 'Contained', meta: 'Petals · Lace',
+      set: { pose: 'profileR', expression: 'serene', render: 'photo', lens: 'p85', fracture: ['petals', 'shards'], materials: ['lacquer', 'rose', 'lace'], palette: 'quiet', background: 'drift', lighting: 'chiaro', mood: ['composure', 'surrender'], intensity: 3 } },
+    { id: 'fractured', kind: 'portrait', col: 'The Quiet Fracture', name: 'Fractured', meta: 'Tiles · Red grid',
+      set: { pose: 'profileR', expression: 'serene', render: 'photo', lens: 'p85', fracture: ['mosaic', 'shards'], materials: ['obsidian', 'lacquer'], palette: 'quiet', background: 'mosaic', lighting: 'rim', mood: ['stillness'], intensity: 4 } },
+    { id: 'torn', kind: 'portrait', col: 'The Quiet Fracture', name: 'Torn', meta: 'Torn paper · Collage',
+      set: { pose: 'profileR', expression: 'grief', render: 'photo', lens: 'p85', fracture: ['paper', 'shards'], materials: ['lacquer', 'charcoal'], palette: 'quiet', background: 'collage', lighting: 'chiaro', mood: ['endurance', 'grief'], intensity: 4 } },
+    { id: 'withered', kind: 'portrait', col: 'The Quiet Fracture', name: 'Withered', meta: 'Petals · Ash',
+      set: { pose: 'profileR', expression: 'serene', render: 'photo', lens: 'p85', fracture: ['petals', 'shards', 'ash'], materials: ['lacquer', 'rose', 'beads'], palette: 'quiet', background: 'drift', lighting: 'chiaro', mood: ['transcendence', 'surrender'], intensity: 5 } },
+    // Portrait · Fractures
+    { id: 'dispersed', kind: 'portrait', col: 'Fractures', name: 'Dispersed', meta: 'Colour squares · White',
+      set: { pose: 'three', expression: 'direct', render: 'mixed', lens: 'none', fracture: ['pixels', 'splatter'], materials: [], palette: 'vivid', background: 'white', composition: 'float', overlays: ['dots'], lighting: 'even', mood: ['memory'], intensity: 4, ar: '2:3' } },
+    { id: 'scattered', kind: 'portrait', col: 'Fractures', name: 'Scattered', meta: 'Photo fragments',
+      set: { pose: 'close', expression: 'serene', render: 'mixed', lens: 'none', fracture: ['photofrag', 'mosaic'], materials: ['photos'], palette: 'sepia', background: 'white', overlays: ['splatter'], lighting: 'soft', mood: ['memory', 'composure'], intensity: 3, ar: '2:3' } },
+    { id: 'remembered', kind: 'portrait', col: 'Fractures', name: 'Remembered', meta: 'Man · Blue fragments',
+      set: { subject: 'man', pose: 'three', expression: 'grief', render: 'mixed', lens: 'none', fracture: ['mosaic', 'photofrag'], materials: ['photos'], palette: 'nocturne', background: 'white', overlays: ['splatter'], lighting: 'soft', mood: ['grief', 'memory'], intensity: 4, ar: '2:3' } },
+    { id: 'pale-division', kind: 'portrait', col: 'Fractures', name: 'Pale Division', meta: 'Lilac planes',
+      set: { pose: 'close', expression: 'direct', render: 'painting', lens: 'none', fracture: ['geometric'], materials: ['photos'], palette: 'lilac', background: 'white', lighting: 'soft', mood: ['composure', 'solitude'], intensity: 3, ar: '2:3' } },
+    { id: 'filigree', kind: 'portrait', col: 'Fractures', name: 'Filigree', meta: 'Porcelain · Carved lace',
+      set: { subject: 'bust', pose: 'three', expression: 'direct', render: 'sculpture', lens: 'p85', fracture: ['filigree'], materials: ['filigree'], palette: 'bone', background: 'void', lighting: 'rembrandt', mood: ['transcendence', 'stillness'], intensity: 3, ar: '9:16' } },
+    { id: 'hooded', kind: 'portrait', col: 'Fractures', name: 'The Hooded', meta: 'Black hood · Gold leaf',
+      set: { subject: 'hooded', pose: 'close', expression: 'direct', render: 'photo', lens: 'p85', fracture: ['kintsugi'], materials: ['gold', 'beads'], palette: 'quiet', background: 'void', lighting: 'chiaro', mood: ['composure'], intensity: 2, ar: '9:16' } },
+    { id: 'mandala', kind: 'portrait', col: 'Fractures', name: 'Mandala', meta: 'Violet pattern · Profile',
+      set: { pose: 'profileL', expression: 'direct', render: 'photo', lens: 'p85', fracture: ['filigree'], materials: ['filigree'], palette: 'plum', background: 'void', lighting: 'rim', mood: ['transcendence'], intensity: 2, ar: '9:16' } },
+    // Portrait · Studio archive
+    { id: 'blueprint', kind: 'portrait', col: 'Studio archive', name: 'Blueprint', meta: 'Buildings · Hairlines',
+      set: { pose: 'tilted', expression: 'serene', render: 'mixed', lens: 'none', fracture: ['buildings', 'watercolour'], materials: ['photos'], palette: 'sunset', background: 'white', composition: 'float', overlays: ['lines', 'drawings', 'text', 'splatter'], lighting: 'even', mood: ['transcendence', 'memory'], intensity: 3, ar: '9:16' } },
+    { id: 'score', kind: 'portrait', col: 'Studio archive', name: 'Score', meta: 'Sheet music · Splatter',
+      set: { pose: 'profileL', expression: 'serene', render: 'mixed', lens: 'none', fracture: ['splatter', 'watercolour'], materials: ['sheetmusic'], palette: 'ember', background: 'sheetmusic', overlays: ['splatter'], lighting: 'soft', mood: ['grief', 'memory'], intensity: 2, ar: '9:16' } },
+    { id: 'bloom', kind: 'portrait', col: 'Studio archive', name: 'Bloom', meta: 'Flowers · Porcelain',
+      set: { pose: 'profileL', expression: 'serene', render: 'mixed', lens: 'none', fracture: ['flowers', 'porcelain'], materials: ['lacquer', 'rose'], palette: 'poppy', background: 'white', lighting: 'soft', mood: ['renewal', 'composure'], intensity: 3, ar: '2:3' } },
+    { id: 'autumn', kind: 'portrait', col: 'Studio archive', name: 'Autumn', meta: 'Leaves · Single tear',
+      set: { pose: 'profileL', expression: 'tear', render: 'mixed', lens: 'none', fracture: ['leaves', 'porcelain'], materials: ['charcoal'], palette: 'sepia', background: 'linen', lighting: 'soft', mood: ['memory', 'surrender'], intensity: 3, ar: '2:3' } },
+    { id: 'cosmic', kind: 'portrait', col: 'Studio archive', name: 'Cosmic', meta: 'Nebula cracks',
+      set: { pose: 'profileR', expression: 'lowered', render: 'photo', lens: 'p85', fracture: ['cosmos', 'porcelain'], materials: [], palette: 'celestial', background: 'space', lighting: 'rim', mood: ['transcendence'], intensity: 3, ar: '9:16' } },
 
-    { id: 'blueprint', kind: 'portrait', col: 'Studio references', name: 'Blueprint', meta: 'Watercolour · Buildings · Hairlines',
-      set: { pose: 'tilted', expression: 'serene', render: 'mixed', lens: 'none', fracture: ['buildings', 'watercolour'], materials: ['photos'], palette: 'sunset', colour: 'full', background: 'white', composition: 'float', overlays: ['lines', 'drawings', 'text', 'splatter'], lighting: 'even', mood: ['transcendence', 'memory'], intensity: 3, ar: '9:16' } },
-    { id: 'score', kind: 'portrait', col: 'Studio references', name: 'Score', meta: 'Sheet music · Ink strands · Splatter',
-      set: { pose: 'wind', expression: 'lowered', render: 'mixed', lens: 'none', fracture: ['inklines', 'splatter'], materials: ['sheetmusic'], palette: 'violet', colour: 'full', background: 'sheetmusic', composition: 'full', overlays: ['dots'], lighting: 'soft', mood: ['grief', 'memory'], intensity: 2, ar: '16:9' } },
-    { id: 'poppy', kind: 'portrait', col: 'Studio references', name: 'Poppy', meta: 'Tiles · Flowers · B&W subject',
-      set: { pose: 'close', expression: 'direct', render: 'mixed', lens: 'none', fracture: ['mosaic', 'flowers'], materials: [], palette: 'poppy', colour: 'selective', background: 'linen', composition: 'tiles', overlays: ['registration'], lighting: 'even', mood: ['composure', 'renewal'], intensity: 3, ar: '16:9' } },
+    // Landscape · Zen Garden
+    { id: 'blood-moon', kind: 'landscape', col: 'Zen Garden', name: 'Blood Moon', meta: 'Red sun · Ink wash',
+      set: { scene: 'garden', lview: 'branch', weather: 'redsun', render: 'sumi', lens: 'none', fracture: ['blossom', 'watercolour'], materials: [], palette: 'zen', background: 'rice', composition: 'float', overlays: ['seal'], lighting: 'even', mood: ['stillness', 'solitude'], intensity: 1, ar: '2:3' } },
+    { id: 'mountain-passage', kind: 'landscape', col: 'Zen Garden', name: 'Mountain Passage', meta: 'Misty peaks · River',
+      set: { scene: 'river', lview: 'branch', weather: 'dawn', render: 'sumi', lens: 'none', fracture: ['watercolour', 'blossom'], materials: [], palette: 'zen', background: 'rice', composition: 'float', overlays: ['seal'], lighting: 'soft', mood: ['stillness', 'renewal'], intensity: 1, ar: '2:3' } },
+    { id: 'still-garden', kind: 'landscape', col: 'Zen Garden', name: 'Still Garden', meta: 'Rocks · Peonies',
+      set: { scene: 'garden', lview: 'foreground', weather: 'overcast', render: 'sumi', lens: 'none', fracture: ['blossom'], materials: [], palette: 'zen', background: 'rice', composition: 'float', overlays: ['seal'], lighting: 'soft', mood: ['solitude', 'stillness'], intensity: 1, ar: '2:3' } },
+    // Landscape · Celestial
+    { id: 'earth', kind: 'landscape', col: 'Celestial', name: 'Fracture I · Earth', meta: 'Planet · Shattering',
+      set: { scene: 'planet', lview: 'vista', weather: 'night', render: 'photo', lens: 'none', fracture: ['stone', 'cosmos'], materials: ['obsidian'], palette: 'celestial', background: 'space', composition: 'full', lighting: 'rim', mood: ['transcendence', 'endurance'], intensity: 4, ar: '9:16' } },
+    { id: 'core', kind: 'landscape', col: 'Celestial', name: 'Fracture II · Core', meta: 'Planet · Molten core',
+      set: { scene: 'planet', lview: 'vista', weather: 'night', render: 'photo', lens: 'none', fracture: ['stone', 'ash'], materials: ['obsidian'], palette: 'celestial', background: 'space', composition: 'full', lighting: 'below', mood: ['endurance', 'stillness'], intensity: 5, ar: '9:16' } },
+    // Landscape · Studio archive
+    { id: 'lone-tree', kind: 'landscape', col: 'Studio archive', name: 'Lone Tree', meta: 'Island · Plum smoke',
+      set: { scene: 'island', lview: 'lone', weather: 'dawn', render: 'photo', lens: 'medium', fracture: ['ash'], materials: ['moss'], palette: 'plum', background: 'fog', composition: 'float', lighting: 'soft', mood: ['solitude', 'stillness'], intensity: 2, ar: '2:3' } },
+    { id: 'blossom-tree', kind: 'landscape', col: 'Studio archive', name: 'Blossom Tree', meta: 'Cherry tree · Drips',
+      set: { scene: 'lake', lview: 'lone', weather: 'overcast', render: 'sumi', lens: 'none', fracture: ['blossom', 'drips'], materials: [], palette: 'blush', background: 'white', composition: 'cutaway', lighting: 'even', mood: ['renewal', 'solitude'], intensity: 2, ar: '9:16' } },
 
-    { id: 'sunbloom', kind: 'landscape', col: 'Studio references', name: 'Sun Bloom', meta: 'Daisies · Watercolour sun · Thread',
-      set: { scene: 'hills', lview: 'foreground', weather: 'clear', render: 'textile', lens: 'none', fracture: ['watercolour'], materials: ['thread'], palette: 'sunset', colour: 'full', background: 'parchment', composition: 'full', overlays: [], lighting: 'even', mood: ['renewal', 'memory'], intensity: 2, ar: '4:5' } },
-    { id: 'faultline', kind: 'landscape', col: 'New directions', name: 'Fault Line', meta: 'Sea cliffs · Kintsugi · Storm',
-      set: { scene: 'coast', lview: 'low', weather: 'storm', render: 'photo', lens: 'wide24', fracture: ['kintsugi', 'stone'], materials: ['gold', 'lacquer'], palette: 'quiet', colour: 'full', background: 'clouds', composition: 'full', overlays: [], lighting: 'chiaro', mood: ['stillness', 'endurance'], intensity: 3, ar: '5:7' } },
-    { id: 'tideline', kind: 'landscape', col: 'New directions', name: 'Tideline', meta: 'Shore · Ink drips · Horizon line',
-      set: { scene: 'shore', lview: 'vista', weather: 'overcast', render: 'inkwash', lens: 'none', fracture: ['drips', 'watercolour'], materials: ['moss'], palette: 'indigo', colour: 'full', background: 'white', composition: 'cutaway', overlays: ['lines', 'splatter'], lighting: 'even', mood: ['solitude', 'stillness'], intensity: 3, ar: '16:9' } },
-
-    { id: 'inkcottage', kind: 'architecture', col: 'Studio references', name: 'Ink Cottage', meta: 'Farmhouse · Horizon line · Ink drips',
-      set: { building: 'farmhouse', aview: 'facade', weather: 'overcast', render: 'inkwash', lens: 'none', fracture: ['drips', 'paint'], materials: ['rust'], palette: 'indigo', colour: 'full', background: 'white', composition: 'cutaway', overlays: ['drawings', 'lines'], lighting: 'even', mood: ['stillness', 'memory'], intensity: 3, ar: '16:9' } },
-    { id: 'floating', kind: 'architecture', col: 'Studio references', name: 'Floating House', meta: 'Concrete · Cross-section · Warm glow',
-      set: { building: 'modern', aview: 'section', weather: 'dawn', render: 'mixed', lens: 'none', fracture: ['watercolour', 'drips'], materials: ['concrete'], palette: 'indigo', colour: 'full', background: 'white', composition: 'cutaway', overlays: ['lines'], lighting: 'interior', mood: ['stillness', 'renewal'], intensity: 2, ar: '16:9' } },
-    { id: 'papercity', kind: 'architecture', col: 'Studio references', name: 'Paper City', meta: 'Skyline · B&W collage · Blush',
-      set: { building: 'skyline', aview: 'elevated', weather: 'overcast', render: 'collagebw', lens: 'none', fracture: ['paper', 'mosaic'], materials: ['newsprint'], palette: 'blush', colour: 'selective', background: 'white', composition: 'full', overlays: ['dots', 'text'], lighting: 'even', mood: ['memory'], intensity: 2, ar: '5:7' } },
-    { id: 'spectrum', kind: 'architecture', col: 'Studio references', name: 'Spectrum Skyline', meta: 'Impasto · Colour panels · Black sun',
-      set: { building: 'skyline', aview: 'silhouette', weather: 'night', render: 'impasto', lens: 'none', fracture: ['mosaic', 'paint'], materials: ['gold'], palette: 'spectrum', colour: 'full', background: 'mosaic', composition: 'split', overlays: ['sun', 'gold'], lighting: 'even', mood: ['endurance'], intensity: 3, ar: '3:2' } }
+    // Architecture · Watercolour Cities
+    { id: 'empire-state', kind: 'architecture', col: 'Watercolour Cities', name: 'Empire State', meta: 'Manhattan · Lavender',
+      set: { building: 'empire', aview: 'isometric', weather: 'overcast', render: 'archwc', lens: 'none', fracture: ['watercolour', 'drips'], materials: [], palette: 'wash', background: 'white', composition: 'vignette', overlays: ['splatter'], lighting: 'even', mood: ['memory'], intensity: 2, ar: '2:3' } },
+    { id: 'manhattan', kind: 'architecture', col: 'Watercolour Cities', name: 'Manhattan Civic', meta: 'Plazas · Soft wash',
+      set: { building: 'manhattan', aview: 'isometric', weather: 'overcast', render: 'archwc', lens: 'none', fracture: ['watercolour'], materials: [], palette: 'wash', background: 'white', composition: 'vignette', overlays: ['splatter'], lighting: 'even', mood: ['memory', 'stillness'], intensity: 2, ar: '2:3' } },
+    { id: 'paris', kind: 'architecture', col: 'Watercolour Cities', name: 'Paris Autumn', meta: 'Eiffel · Autumn wash',
+      set: { building: 'eiffel', aview: 'isometric', weather: 'clear', render: 'archwc', lens: 'none', fracture: ['watercolour', 'leaves'], materials: [], palette: 'sunset', background: 'white', composition: 'vignette', overlays: [], lighting: 'even', mood: ['memory', 'renewal'], intensity: 2, ar: '2:3' } },
+    { id: 'tokyo-fuji', kind: 'architecture', col: 'Watercolour Cities', name: 'Tokyo Fuji Rising', meta: 'Skyline · Fuji',
+      set: { building: 'tokyo', aview: 'isometric', weather: 'overcast', render: 'archwc', lens: 'none', fracture: ['watercolour', 'drips'], materials: [], palette: 'wash', background: 'white', composition: 'vignette', overlays: ['splatter'], lighting: 'even', mood: ['stillness'], intensity: 2, ar: '2:3' } },
+    { id: 'westminster', kind: 'architecture', col: 'Watercolour Cities', name: 'Westminster', meta: 'Thames · Clock tower',
+      set: { building: 'westminster', aview: 'isometric', weather: 'overcast', render: 'archwc', lens: 'none', fracture: ['watercolour'], materials: [], palette: 'wash', background: 'white', composition: 'vignette', overlays: ['splatter'], lighting: 'even', mood: ['memory', 'endurance'], intensity: 2, ar: '2:3' } },
+    // Architecture · New York
+    { id: 'empire-rain', kind: 'architecture', col: 'New York', name: 'Empire Rain', meta: 'Rainy night · Oil',
+      set: { building: 'street', aview: 'street', weather: 'rain', render: 'oilmedia', lens: 'none', fracture: ['paint'], materials: [], palette: 'nightcity', background: 'night', composition: 'full', lighting: 'interior', mood: ['solitude', 'memory'], intensity: 1, ar: '2:3' } },
+    { id: 'october', kind: 'architecture', col: 'New York', name: 'October Downtown', meta: 'Wet avenue · Amber',
+      set: { building: 'street', aview: 'street', weather: 'rain', render: 'oilmedia', lens: 'none', fracture: ['paint', 'splatter'], materials: [], palette: 'nightcity', background: 'night', composition: 'full', lighting: 'interior', mood: ['memory', 'endurance'], intensity: 1, ar: '2:3' } },
+    // Architecture · Studio archive
+    { id: 'floating-city', kind: 'architecture', col: 'Studio archive', name: 'Floating City', meta: 'Ink · Colour splash',
+      set: { building: 'floatingcity', aview: 'facade', weather: 'overcast', render: 'inkwash', lens: 'none', fracture: ['drips', 'splatter'], materials: [], palette: 'sunset', background: 'white', composition: 'cutaway', overlays: ['lines'], lighting: 'even', mood: ['endurance'], intensity: 3, ar: '16:9' } },
+    { id: 'neon-drift', kind: 'architecture', col: 'Studio archive', name: 'Neon Drift', meta: 'Pastel · Floating',
+      set: { building: 'floatingcity', aview: 'facade', weather: 'dusk', render: 'painting', lens: 'none', fracture: ['drips', 'inklines'], materials: [], palette: 'plum', background: 'white', composition: 'cutaway', overlays: [], lighting: 'even', mood: ['renewal'], intensity: 2, ar: '16:9' } },
+    { id: 'fractured-city', kind: 'architecture', col: 'Studio archive', name: 'Fractured City', meta: 'Ink · Faces in towers',
+      set: { building: 'skyline', aview: 'low', weather: 'storm', render: 'collagebw', lens: 'none', fracture: ['ash', 'inklines'], materials: [], palette: 'bone', colour: 'mono', background: 'white', composition: 'full', overlays: [], lighting: 'even', mood: ['endurance', 'solitude'], intensity: 4, ar: '2:3' } }
   ];
+  const COL_NOTE = {
+    'The Quiet Fracture': 'Debut collection · A2 editions of 25',
+    'Fractures': 'Faces in pieces, colour and memory',
+    'Zen Garden': 'Ink wash, blossom and red suns',
+    'Celestial': 'The planet, breaking',
+    'Watercolour Cities': 'Pen, ink and watercolour landmarks',
+    'New York': 'Rain-soaked night streets',
+    'Studio archive': 'Earlier studies and references'
+  };
 
   const BASE = {
     kind: 'portrait',
     subject: 'woman', pose: 'close', expression: 'serene',
-    scene: 'coast', lview: 'low', building: 'farmhouse', aview: 'facade', weather: 'overcast',
+    scene: 'garden', lview: 'branch', building: 'empire', aview: 'isometric', weather: 'overcast',
     fracture: ['lacquer'], materials: ['lacquer', 'filigree', 'beads'], intensity: 3,
     palette: 'quiet', colour: 'full', background: 'void', composition: 'full', overlays: [], lighting: 'rembrandt',
     render: 'photo', lens: 'p85', mood: ['grief', 'stillness'],
-    note: '', ar: '5:7', stylize: 400, chaos: 8, raw: true, format: 'mj', title: 'Mourning', preset: 'mourning', locks: {}
+    note: '', ar: '5:7', stylize: 400, chaos: 8, raw: true, format: 'mj', title: 'Mourning', preset: 'mourning', base: 'mourning', locks: {}
   };
 
   // ---------- Helpers ----------
@@ -675,9 +865,17 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
   const optOf = (k, id) => GROUPS[k].opts.find(o => o.id === id);
   const clone = o => JSON.parse(JSON.stringify(o));
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const img = id => `images/${id}.jpg`;
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
+  };
+  const swatch = pal => `<span class="pal-sw">${pal.sw.map(c => `<span style="background:${c}"></span>`).join('')}</span>`;
+  const ICON = {
+    lockOn: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
+    lockOff: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
+    copy: '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3 10.5V4a1.5 1.5 0 0 1 1.5-1.5H11" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
+    check: '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   };
 
   const clusters = kind => [
@@ -704,6 +902,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     v.chaos = Math.min(100, Math.max(0, +v.chaos || 0));
     v.note = typeof v.note === 'string' ? v.note.slice(0, 160) : '';
     v.locks = v.locks && typeof v.locks === 'object' ? v.locks : {};
+    if (!PRESETS.some(p => p.id === v.preset)) v.preset = null;
+    if (!PRESETS.some(p => p.id === v.base)) v.base = null;
     return v;
   }
 
@@ -712,10 +912,25 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     const n = min + Math.floor(Math.random() * (g.max - min + 1));
     return shuffle(g.opts).slice(0, n).map(o => o.id);
   }
+  const newTitle = (avoid = []) => { const pool = TITLES.filter(t => !avoid.includes(t)); return pick(pool.length ? pool : TITLES); };
 
-  function newTitle(avoid = []) {
-    const pool = TITLES.filter(t => !avoid.includes(t));
-    return pick(pool.length ? pool : TITLES);
+  // The studio work that best matches a set of choices.
+  function closest(s) {
+    let best = null, top = -1;
+    for (const pr of PRESETS) {
+      if (pr.kind !== s.kind) continue;
+      const p = Object.assign({}, BASE, pr.set);
+      let sc = s.base === pr.id ? 5 : 0;
+      if (p.palette === s.palette) sc += 4;
+      if (p.render === s.render) sc += 3;
+      if (p.background === s.background) sc += 2;
+      if (p.composition === s.composition) sc += 1.5;
+      KIND_GROUPS[s.kind].forEach(k => { if (p[k] === s[k]) sc += 1.5; });
+      sc += 1.5 * p.fracture.filter(f => s.fracture.includes(f)).length;
+      sc += .5 * p.materials.filter(m => s.materials.includes(m)).length;
+      if (sc > top) { top = sc; best = pr; }
+    }
+    return best;
   }
 
   // ---------- Prompt engine ----------
@@ -723,15 +938,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 
   function phrases(s) {
     const pal = optOf('palette', s.palette);
-    const fr = joinList(s.fracture.map(id => optOf('fracture', id).p));
-    const mat = joinList(s.materials.map(id => optOf('materials', id).p));
-    const lead = KIND_GROUPS[s.kind].map(k => optOf(k, s[k]).p);
     const lens = optOf('lens', s.lens).p;
     return {
-      kind: s.kind,
       render: val(optOf('render', s.render).p, s.kind),
-      lead,
-      fracture: LEVELS[s.intensity - 1].build(fr, mat, FRAME[s.kind]),
+      lead: KIND_GROUPS[s.kind].map(k => optOf(k, s[k]).p),
+      fracture: LEVELS[s.intensity - 1].build(joinList(s.fracture.map(id => optOf('fracture', id).p)), joinList(s.materials.map(id => optOf('materials', id).p)), FRAME[s.kind]),
       overlays: joinList(s.overlays.map(id => optOf('overlays', id).p)),
       palette: pal.p,
       colour: optOf('colour', s.colour).p,
@@ -779,7 +990,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       const params = [`--ar ${ar.mj}`, `--stylize ${s.stylize}`, s.chaos ? `--chaos ${s.chaos}` : '', s.raw ? '--style raw' : '', '--v 7', `--no ${NEG_MJ[negKey]}`]
         .filter(Boolean).join(' ');
       return { prompt: `${body} ${params}`, negative: null,
-        settings: 'Paste straight into Midjourney. Aspect, stylize, chaos and the <b>--no</b> list are already attached. Raw style suits photographs; turn it off for illustration and collage.' };
+        settings: 'Paste straight into Midjourney. Aspect, stylize, chaos and the <b>--no</b> list are already attached. Raw style suits photographs; turn it off for ink, watercolour and collage.' };
     }
     if (fmt === 'sd') {
       const w = (1 + 0.08 * s.intensity).toFixed(2);
@@ -797,361 +1008,28 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       settings: 'Written as plain sentences for ChatGPT / DALL·E, Adobe Firefly, Ideogram, Leonardo and Gemini.' };
   }
 
-  // ---------- Layout study: a small generative sketch of the current settings ----------
-  const LIGHT_GROUND = { white: '#F3F0EA', parchment: '#E8DCC2', linen: '#D9D7D1', sheetmusic: '#EADFC8', fog: '#E2E4E5', plaster: '#C8BFB2' };
-  const DARK_GROUND = { void: '#0B0A09', drift: '#0F0D0C', smoke: '#121212', clouds: '#181B20', night: '#07080D', haze: '#150C08', mosaic: '#0E0D0C', collage: '#191716' };
-  const SHAPE = { mosaic: 'sq', blueprint: 'sq', drips: 'drip', buildings: 'bldg', shards: 'tri', glass: 'tri', petals: 'ell', inklines: 'line', splatter: 'spat', flowers: 'flower' };
-  const BUILDING_SHAPE = { farmhouse: 'house', cottage: 'house', chapel: 'house', modern: 'modern', skyline: 'skyline', brutalist: 'tower', cathedral: 'cathedral', lighthouse: 'lighthouse', bridge: 'bridge' };
-  const GOLD = '#C9A24A';
-  const TAU = Math.PI * 2;
-
-  function mulberry(seed) {
-    let a = seed >>> 0;
-    return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  }
-  function hashStr(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-  const lum = hex => { const n = parseInt(hex.slice(1), 16); return ((n >> 16) & 255) * .299 + ((n >> 8) & 255) * .587 + (n & 255) * .114; };
-  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
-
-  function shapePath(c, kind, x, y, z, rot, R) {
-    c.save(); c.translate(x, y); c.rotate(kind === 'bldg' || kind === 'drip' ? 0 : rot); c.beginPath();
-    if (kind === 'sq') c.rect(-z / 2, -z / 2, z, z);
-    else if (kind === 'bldg') c.rect(-z * .3, -z * .7, z * .6, z * 1.4);
-    else if (kind === 'drip') c.rect(-z * .12, -z * .3, z * .24, z * (1.2 + R() * 2));
-    else if (kind === 'tri') { c.moveTo(0, -z * .7); c.lineTo(z * .6, z * .5); c.lineTo(-z * .5, z * .4); c.closePath(); }
-    else if (kind === 'ell' || kind === 'line' || kind === 'spat') c.ellipse(0, 0, z * .55, z * .22, 0, 0, TAU);
-    else if (kind === 'flower') {
-      for (let k = 0; k < 7; k++) { const a = k / 7 * TAU, ex = Math.cos(a) * z * .3, ey = Math.sin(a) * z * .3; c.moveTo(ex + Math.cos(a) * z * .3, ey + Math.sin(a) * z * .3); c.ellipse(ex, ey, z * .3, z * .12, a, 0, TAU); }
-    } else {
-      const k = 5 + Math.floor(R() * 3);
-      for (let i = 0; i < k; i++) { const a = i / k * TAU, r = z * (.35 + R() * .3); i ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
-      c.closePath();
-    }
-    c.restore();
-  }
-
-  function drawSubject(l, s, b, R, H) {
-    const rr = (a, z) => a + R() * (z - a);
-    const out = { holes: [], arches: [], ridge: null };
-    if (s.kind === 'portrait') {
-      const flip = s.pose === 'profileL';
-      // A profile facing right in a unit box: neck, skull, brow, nose, lips, chin.
-      const X = u => b.x + (flip ? 1 - u : u) * b.w, Y = v => b.y + v * b.h;
-      const q = (cx, cy, x, y) => l.quadraticCurveTo(X(cx), Y(cy), X(x), Y(y));
-      l.beginPath();
-      l.moveTo(X(.30), Y(1)); l.lineTo(X(.30), Y(.82));
-      q(.12, .70, .12, .45);
-      l.bezierCurveTo(X(.12), Y(.15), X(.35), Y(.02), X(.55), Y(.04));
-      l.bezierCurveTo(X(.70), Y(.06), X(.76), Y(.18), X(.76), Y(.30));
-      q(.77, .37, .79, .41);
-      l.lineTo(X(.88), Y(.55));
-      q(.895, .585, .83, .585);
-      l.lineTo(X(.80), Y(.60));
-      q(.835, .635, .82, .655);
-      q(.79, .67, .81, .69);
-      q(.825, .72, .77, .74);
-      q(.785, .80, .72, .83);
-      q(.64, .85, .60, .86);
-      l.lineTo(X(.60), Y(1));
-      l.closePath(); l.fill();
-      out.eye = [b.x + (flip ? 1 - .66 : .66) * b.w, b.y + .41 * b.h, b.w * .07];
-    } else if (s.kind === 'landscape') {
-      const amp = { mountain: .95, coast: .7, forest: .55, hills: .35, plains: .2, meadow: .25, saltflat: .05, lake: .18, shore: .3 }[s.scene] ?? .4;
-      const ph = [rr(0, 6), rr(0, 6), rr(0, 6)], n = 40, ridge = [];
-      for (let i = 0; i <= n; i++) {
-        const t = i / n;
-        let y = (Math.sin(t * 3 + ph[0]) * .5 + Math.sin(t * 7 + ph[1]) * .3 + Math.sin(t * 13 + ph[2]) * .2 + 1) / 2;
-        if (s.scene === 'mountain') y = Math.pow(y, .6) * (i % 4 === 0 ? 1 : .82);
-        if (s.scene === 'coast') y = t < .68 ? .82 + y * .18 : .06;
-        if (s.scene === 'forest') y = y * .7 + (i % 2 ? .25 : 0);
-        ridge.push([b.x + t * b.w, b.base - y * amp * b.h]);
-      }
-      l.beginPath(); l.moveTo(b.x, b.base);
-      ridge.forEach(p => l.lineTo(p[0], p[1]));
-      const bottom = ['full', 'tiles', 'panels', 'split'].includes(s.composition) ? H : b.base;
-      l.lineTo(b.x + b.w, bottom); l.lineTo(b.x, bottom); l.closePath(); l.fill();
-      out.ridge = ridge;
-    } else {
-      const t = BUILDING_SHAPE[s.building] || 'house';
-      const { x, w, h, base } = b;
-      if (t === 'house') {
-        const bodyH = h * .48, roofH = h * .32, bw = w * .78, bx = x + (w - bw) / 2;
-        l.fillRect(bx, base - bodyH, bw, bodyH);
-        l.beginPath(); l.moveTo(bx - w * .04, base - bodyH); l.lineTo(bx + bw / 2, base - bodyH - roofH); l.lineTo(bx + bw + w * .04, base - bodyH); l.closePath(); l.fill();
-        if (s.building !== 'chapel') l.fillRect(bx + bw * .72, base - bodyH - roofH * .8, bw * .07, roofH * .55);
-        out.holes.push([bx + bw * .44, base - bodyH * .62, bw * .12, bodyH * .62], [bx + bw * .12, base - bodyH * .72, bw * .14, bodyH * .3], [bx + bw * .72, base - bodyH * .72, bw * .14, bodyH * .3]);
-      } else if (t === 'modern') {
-        l.fillRect(x, base - h * .08, w, h * .08);
-        l.fillRect(x + w * .05, base - h * .5, w * .25, h * .42);
-        l.fillRect(x + w * .55, base - h * .75, w * .2, h * .67);
-        l.fillRect(x + w * .78, base - h * .9, w * .14, h * .82);
-        l.fillRect(x - w * .06, base - h * .54, w * 1.1, h * .05);
-        l.fillRect(x + w * .3, base - h * .49, w * .25, h * .41);
-        out.holes.push([x + w * .32, base - h * .46, w * .21, h * .36]);
-      } else if (t === 'skyline') {
-        let cx = x;
-        while (cx < x + w) {
-          const bw = w * rr(.04, .09), bh = h * rr(.3, 1);
-          l.fillRect(cx, base - bh, bw + .6, bh);
-          if (R() < .2) { l.beginPath(); l.moveTo(cx, base - bh); l.lineTo(cx + bw / 2, base - bh - h * .22); l.lineTo(cx + bw, base - bh); l.fill(); l.fillRect(cx + bw / 2 - .6, base - bh - h * .36, 1.2, h * .15); }
-          for (let k = 0; k < 7; k++) out.holes.push([cx + rr(.15, .75) * bw, base - rr(.08, .95) * bh, 1.4, 1.6]);
-          cx += bw + rr(0, 2);
-        }
-      } else if (t === 'tower') {
-        const tw = w * .45, tx = x + (w - tw) / 2, sh = h / 6;
-        for (let k = 0; k < 6; k++) { const off = (k % 2 ? 1 : -1) * w * .03; l.fillRect(tx + off, base - (k + 1) * sh, tw, sh + .6); for (let j = 0; j < 4; j++) out.holes.push([tx + off + tw * (.08 + j * .23), base - (k + 1) * sh + sh * .3, tw * .13, sh * .4]); }
-      } else if (t === 'cathedral') {
-        const bw = w * .7, bx = x + (w - bw) / 2, tw = bw * .22;
-        l.fillRect(bx, base - h * .55, bw, h * .55);
-        [bx, bx + bw - tw].forEach(tx => { l.fillRect(tx, base - h * .8, tw, h * .8); l.beginPath(); l.moveTo(tx, base - h * .8); l.lineTo(tx + tw / 2, base - h * 1.05); l.lineTo(tx + tw, base - h * .8); l.fill(); });
-        l.beginPath(); l.moveTo(bx + tw, base - h * .55); l.lineTo(bx + bw / 2, base - h * .74); l.lineTo(bx + bw - tw, base - h * .55); l.fill();
-        out.holes.push([bx + bw / 2 - bw * .07, base - h * .48, bw * .14, h * .3]);
-      } else if (t === 'lighthouse') {
-        const cx = x + w / 2, bwB = w * .22, bwT = w * .13, th = h * .82;
-        l.beginPath(); l.ellipse(cx, base, w * .5, h * .08, 0, Math.PI, TAU); l.fill();
-        l.beginPath(); l.moveTo(cx - bwB / 2, base); l.lineTo(cx - bwT / 2, base - th); l.lineTo(cx + bwT / 2, base - th); l.lineTo(cx + bwB / 2, base); l.fill();
-        l.fillRect(cx - bwT * .7, base - th - h * .1, bwT * 1.4, h * .1);
-        l.beginPath(); l.moveTo(cx - bwT * .8, base - th - h * .1); l.lineTo(cx, base - th - h * .2); l.lineTo(cx + bwT * .8, base - th - h * .1); l.fill();
-        out.holes.push([cx - bwT * .45, base - th - h * .085, bwT * .9, h * .07]);
-      } else {
-        l.fillRect(x, base - h * .45, w, h * .45);
-        for (let k = 0; k < 3; k++) out.arches.push([x + w / 3 * k + w / 6, base, w * .13]);
-      }
-      if (['full', 'tiles', 'panels'].includes(s.composition) && t !== 'lighthouse') l.fillRect(x - w * .2, base, w * 1.4, 1.2);
-    }
-    // Windows and arches are cut out, so the ground (or a warm glow) shows through.
-    l.globalCompositeOperation = 'destination-out';
-    out.holes.forEach(([x, y, w, h]) => l.fillRect(x, y, w, h));
-    out.arches.forEach(([x, y, r]) => { l.beginPath(); l.arc(x, y, r, Math.PI, TAU); l.fill(); });
-    l.globalCompositeOperation = 'source-over';
-    return out;
-  }
-
-  function drawStudy(cv, s, W, H, setSize = true) {
-    W = Math.max(40, Math.round(W)); H = Math.max(40, Math.round(H));
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    if (setSize) { cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
-    const c = cv.getContext('2d');
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const R = mulberry(hashStr(JSON.stringify([s.kind, s.subject, s.scene, s.building, s.pose, s.lview, s.aview, s.weather, s.fracture, s.materials,
-      s.palette, s.colour, s.background, s.composition, s.overlays, s.intensity, s.title])));
-    const rr = (a, z) => a + R() * (z - a);
-    const minD = Math.min(W, H);
-    const pal = optOf('palette', s.palette).sw;
-    const light = s.background in LIGHT_GROUND;
-    const ground = LIGHT_GROUND[s.background] || DARK_GROUND[s.background] || '#0B0A09';
-    const ink = light ? '#1B1A19' : '#E9E3DA';
-    const byLum = pal.slice().sort((a, z) => lum(a) - lum(z));
-    let subj = light ? ({ portrait: '#3A3734', landscape: '#7A726A', architecture: '#4A4642' })[s.kind] : (s.colour === 'full' ? byLum[2] : '#D6D0C7');
-    if (s.kind === 'architecture' && s.aview === 'silhouette') subj = '#121110';
-    let accents = (s.colour === 'mono' ? [pal[0]] : pal).filter(p => Math.abs(lum(p) - lum(ground)) > 40);
-    if (!accents.length) accents = [light ? '#8E1B1B' : GOLD];
-    const acc = () => accents[Math.floor(R() * accents.length)];
-    const blob = (x, y, r, col, a) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(col, a)); g.addColorStop(1, rgba(col, 0)); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); };
-    const line = (x0, y0, x1, y1) => { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); };
-
-    // Ground
-    const bg = s.background;
-    c.fillStyle = ground; c.fillRect(0, 0, W, H);
-    if (bg === 'fog') { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#F1F2F2'); g.addColorStop(1, '#CDD1D3'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
-    if (bg === 'parchment' || bg === 'sheetmusic') for (let i = 0; i < 7; i++) blob(rr(0, W), rr(0, H), rr(.15, .4) * W, '#9C7A45', .14);
-    if (bg === 'sheetmusic') { c.strokeStyle = 'rgba(58,49,40,.32)'; c.lineWidth = .6; for (let k = 0; k < 5; k++) { const y0 = rr(.05, .9) * H, x0 = rr(-.1, .3) * W, x1 = x0 + rr(.4, .8) * W; for (let j = 0; j < 5; j++) line(x0, y0 + j * 3, x1, y0 + j * 3); } }
-    if (bg === 'linen') { c.strokeStyle = 'rgba(0,0,0,.035)'; c.lineWidth = 1; for (let x = 0; x < W; x += 3) line(x, 0, x, H); for (let y = 0; y < H; y += 3) line(0, y, W, y); }
-    if (bg === 'clouds') for (let i = 0; i < 9; i++) blob(rr(0, W), rr(0, .5) * H, rr(.15, .35) * W, '#5A6370', .3);
-    if (bg === 'smoke') for (let i = 0; i < 10; i++) blob(rr(0, W), rr(0, H), rr(.1, .3) * W, '#8A8A8A', .09);
-    if (bg === 'haze') blob(W * .5, H * 1.05, Math.max(W, H) * .9, '#C2562A', .5);
-    if (bg === 'night') { c.fillStyle = 'rgba(255,255,255,.75)'; for (let i = 0; i < 70; i++) c.fillRect(rr(0, W), rr(0, H * .7), rr(.5, 1.4), rr(.5, 1.4)); }
-    if (bg === 'mosaic') { const cs = Math.max(W, H) / rr(6, 9); for (let y = 0; y < H; y += cs) for (let x = 0; x < W; x += cs) { if (R() < .45) continue; c.fillStyle = R() < .6 ? pal[0] : byLum[0]; c.globalAlpha = rr(.55, .95); c.fillRect(x + rr(-2, 2), y + rr(-2, 2), cs * rr(.8, 1.05), cs * rr(.8, 1.05)); } c.globalAlpha = 1; }
-    if (bg === 'collage') for (let i = 0; i < 14; i++) { c.fillStyle = rgba(R() < .5 ? '#6E6861' : '#3B3734', rr(.3, .6)); c.fillRect(rr(-.1, 1) * W, rr(-.1, 1) * H, rr(.1, .35) * W, rr(.1, .3) * H); }
-    if (bg === 'drift') for (let i = 0; i < 24; i++) { c.fillStyle = rgba(acc(), rr(.2, .5)); const z = rr(2, 7); c.fillRect(rr(0, W), rr(0, H), z, z); }
-    if (bg === 'plaster') { c.strokeStyle = 'rgba(40,30,20,.35)'; c.lineWidth = .7; for (let k = 0; k < 6; k++) { let x = rr(0, W), y = rr(0, H); c.beginPath(); c.moveTo(x, y); for (let j = 0; j < 6; j++) { x += rr(-20, 20); y += rr(-20, 20); c.lineTo(x, y); } c.stroke(); } }
-
-    // Composition underlays
-    const comp = s.composition, horizon = H * .6;
-    if (comp === 'panels') { const n = Math.round(rr(6, 9)), pw = W / n, cols = pal.concat(light ? ['#E9E4DC'] : ['#D8D2C8']); for (let i = 0; i < n; i++) { c.fillStyle = cols[i % cols.length]; c.globalAlpha = rr(.75, 1); c.fillRect(i * pw, 0, pw + .5, H * (s.kind === 'portrait' ? 1 : .66)); } c.globalAlpha = 1; }
-    if (comp === 'tiles') for (let i = 0; i < 22; i++) { const z = rr(.1, .28) * minD; c.fillStyle = rgba(R() < .25 ? '#9A948C' : acc(), rr(.55, .9)); c.fillRect(rr(-.05, .95) * W, rr(-.05, .95) * H, z, z * rr(.7, 1.2)); }
-    if (comp === 'split') { const y0 = H * .64; c.fillStyle = '#0D0C0B'; c.fillRect(0, y0, W, H - y0); for (let i = 0; i < 18; i++) { c.fillStyle = rgba(R() < .35 ? acc() : '#2A2725', rr(.5, .9)); c.fillRect(rr(0, 1) * W, y0 + rr(0, .9) * (H - y0), rr(.03, .12) * W, rr(.15, .5) * (H - y0)); } c.strokeStyle = rgba(GOLD, .7); c.lineWidth = .8; for (let i = 0; i < 6; i++) { const x = rr(0, W); line(x, y0, x, H); } }
-
-    // Where the subject sits
-    let box;
-    if (s.kind === 'portrait') {
-      const hgt = comp === 'float' ? H * .58 : comp === 'cutaway' ? H * .5 : H * .92;
-      const wd = Math.min(hgt * .82, W * .8);
-      const top = comp === 'cutaway' ? horizon - hgt : comp === 'float' ? (H - hgt) / 2 : H * .1;
-      box = { x: W * .46 - wd / 2, y: top, w: wd, h: hgt };
-    } else if (s.kind === 'landscape') {
-      const wd = comp === 'float' ? W * .62 : W, base = comp === 'cutaway' ? horizon : comp === 'float' ? H * .62 : H * .66;
-      box = { x: (W - wd) / 2, y: base - H * .3, w: wd, h: H * .3, base };
-    } else {
-      const sky = s.building === 'skyline';
-      const wd = comp === 'float' ? W * .5 : sky ? W * .96 : W * .6, hgt = sky ? H * .55 : H * .42;
-      const base = comp === 'cutaway' ? horizon : comp === 'float' ? H * .66 : comp === 'split' ? H * .64 : H * .74;
-      box = { x: (W - wd) / 2, y: base - hgt, w: wd, h: hgt, base };
-    }
-    const types = s.fracture.length ? s.fracture : ['porcelain'];
-    const side = s.pose === 'profileL' && s.kind === 'portrait' ? -1 : 1;
-    const sideX = side > 0 ? box.x + box.w * .78 : box.x + box.w * .22;
-
-    // Watercolour blooms sit behind the subject
-    if (types.includes('watercolour')) {
-      c.globalCompositeOperation = light ? 'multiply' : 'screen';
-      for (let i = 0; i < 4 + s.intensity * 2; i++) blob(sideX + rr(-.5, .5) * box.w * side, box.y + rr(-.1, .9) * box.h, rr(.15, .35) * minD, acc(), light ? .5 : .32);
-      c.globalCompositeOperation = 'source-over';
-    }
-
-    // Subject on its own layer so pieces can be cut out of it
-    const L = document.createElement('canvas'); L.width = cv.width; L.height = cv.height;
-    const l = L.getContext('2d'); l.setTransform(dpr, 0, 0, dpr, 0, 0);
-    l.fillStyle = subj;
-    const geo = drawSubject(l, s, box, R, H);
-
-    const n = [3, 7, 12, 18, 26][s.intensity - 1], reach = .18 + s.intensity * .12, frags = [];
-    for (let i = 0; i < n; i++) {
-      const u = 1 - R() * reach;
-      frags.push({ x: side > 0 ? box.x + u * box.w : box.x + (1 - u) * box.w, y: box.y + rr(.05, .95) * box.h,
-        z: rr(.04, .1) * Math.min(box.w, box.h * 1.2), type: types[i % types.length], rot: rr(0, TAU) });
-    }
-    l.globalCompositeOperation = 'destination-out';
-    frags.forEach(f => { shapePath(l, SHAPE[f.type] || 'poly', f.x, f.y, f.z, f.rot, R); l.fill(); });
-    l.globalCompositeOperation = 'source-over';
-
-    if (s.lighting === 'interior') geo.holes.forEach(([x, y, w, h]) => { c.fillStyle = '#F0A646'; c.fillRect(x, y, w, h); });
-    c.drawImage(L, 0, 0, W, H);
-    if (s.kind === 'architecture' && s.aview === 'reflection') { c.save(); c.globalAlpha = .22; c.translate(0, 2 * box.base); c.scale(1, -1); c.drawImage(L, 0, 0, W, H); c.restore(); }
-    if (geo.eye) { const [ex, ey, er] = geo.eye; c.strokeStyle = light ? 'rgba(255,255,255,.4)' : 'rgba(0,0,0,.45)'; c.lineWidth = 1; c.beginPath(); c.arc(ex, ey - er * .6, er, Math.PI * .25, Math.PI * .75); c.stroke(); }
-
-    // Cracks across the surface
-    c.strokeStyle = types.includes('kintsugi') ? GOLD : light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.6)';
-    c.lineWidth = types.includes('kintsugi') ? 1.4 : .8;
-    for (let k = 0; k < 2 + s.intensity; k++) {
-      let x = sideX + rr(-.1, .1) * box.w, y = box.y + rr(.1, .9) * box.h;
-      c.beginPath(); c.moveTo(x, y);
-      for (let j = 0; j < 5; j++) { x -= side * rr(.02, .09) * box.w; y += rr(-.06, .06) * box.h; c.lineTo(x, y); }
-      c.stroke();
-    }
-
-    // The broken pieces, drifting away from the subject
-    const t = s.intensity / 5;
-    frags.forEach(f => {
-      const dx = side * rr(.12, .8) * box.w * t, dy = (s.kind === 'portrait' ? rr(-.3, .3) : rr(-.7, .05)) * box.h * t;
-      const col = R() < .5 ? subj : acc(), x = f.x + dx, y = f.y + dy, z = f.z * rr(.7, 1.15), kind = SHAPE[f.type] || 'poly';
-      c.globalAlpha = rr(.75, 1);
-      if (kind === 'line') { c.strokeStyle = ink; c.lineWidth = .7; c.beginPath(); c.moveTo(x, y); c.bezierCurveTo(x + side * z * 2, y - z, x + side * z * 3, y + z, x + side * z * 5, y + rr(-1, 1) * z); c.stroke(); }
-      else if (kind === 'spat') { c.fillStyle = col; for (let k = 0; k < 6; k++) { c.beginPath(); c.arc(x + rr(-1, 1) * z, y + rr(-1, 1) * z, rr(.6, 2.2), 0, TAU); c.fill(); } }
-      else {
-        c.fillStyle = col; shapePath(c, kind, x, y, z, f.rot + rr(-1, 1), R); c.fill();
-        if (kind === 'flower') { c.fillStyle = '#E2B13C'; c.beginPath(); c.arc(x, y, z * .12, 0, TAU); c.fill(); }
-        if (kind === 'bldg') { c.fillStyle = ground; for (let k = 0; k < 4; k++) c.fillRect(x - z * .18 + (k % 2) * z * .2, y - z * .5 + Math.floor(k / 2) * z * .45, z * .12, z * .16); }
-        if (f.type === 'kintsugi') { c.strokeStyle = GOLD; c.lineWidth = 1; c.stroke(); }
-      }
-    });
-    c.globalAlpha = 1;
-    if (s.intensity >= 3) for (let i = 0; i < (s.intensity - 2) * 14; i++) { c.fillStyle = rgba(R() < .5 ? subj : acc(), rr(.4, .9)); const z = rr(1, 3.5); c.fillRect(sideX + side * rr(0, .9) * box.w, box.y + rr(-.2, 1) * box.h, z, z); }
-
-    // Hair turning into ink lines
-    if (s.kind === 'portrait' && (s.pose === 'wind' || types.includes('inklines'))) {
-      c.strokeStyle = rgba(ink, .5); c.lineWidth = .6;
-      const hx = side > 0 ? box.x + box.w * .2 : box.x + box.w * .8;
-      for (let i = 0; i < 30; i++) { const y = box.y + rr(.05, .6) * box.h; c.beginPath(); c.moveTo(hx, y); c.bezierCurveTo(hx - side * rr(.2, .5) * box.w, y + rr(-.2, .2) * box.h, hx - side * rr(.4, .8) * box.w, y + rr(-.2, .3) * box.h, hx - side * rr(.6, 1.1) * box.w, y + rr(-.1, .4) * box.h); c.stroke(); }
-    }
-
-    // Landscape details
-    if (geo.ridge) {
-      const ridgeY = x => { const r = geo.ridge; const i = Math.max(0, Math.min(r.length - 1, Math.round((x - box.x) / box.w * (r.length - 1)))); return r[i][1]; };
-      if (s.lview === 'lone') {
-        const tx = box.x + box.w * rr(.25, .4), ty = ridgeY(tx);
-        c.strokeStyle = rgba(light ? '#2A2725' : '#D6D0C7', .9);
-        const branch = (x, y, len, a, d) => { if (d > 6 || len < 2) return; const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len; c.lineWidth = Math.max(.5, 3 - d * .45); line(x, y, x2, y2); branch(x2, y2, len * .72, a - rr(.2, .55), d + 1); branch(x2, y2, len * .72, a + rr(.2, .55), d + 1); };
-        branch(tx, ty, box.h * .35, -Math.PI / 2, 0);
-      }
-      if (s.lview === 'foreground' || s.scene === 'meadow') {
-        for (let i = 0; i < 16; i++) {
-          const x = rr(0, W), top = H * rr(.35, .75);
-          c.strokeStyle = rgba(light ? '#55604A' : '#8C977F', .9); c.lineWidth = .9;
-          c.beginPath(); c.moveTo(x, H); c.quadraticCurveTo(x + rr(-10, 10), (H + top) / 2, x + rr(-6, 6), top); c.stroke();
-          c.fillStyle = '#F4F1EA'; shapePath(c, 'flower', x, top, rr(8, 14), 0, R); c.fill();
-          c.fillStyle = '#E2B13C'; c.beginPath(); c.arc(x, top, 2, 0, TAU); c.fill();
-        }
-      }
-    }
-    if (s.kind !== 'portrait' && s.weather === 'snow') { c.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 90; i++) { c.beginPath(); c.arc(rr(0, W), rr(0, H), rr(.5, 1.5), 0, TAU); c.fill(); } }
-    if (s.kind !== 'portrait' && s.weather === 'dawn') { const g = c.createLinearGradient(0, box.base - box.h * .6, 0, box.base + 10); g.addColorStop(0, 'rgba(240,240,240,0)'); g.addColorStop(1, 'rgba(240,240,240,.45)'); c.fillStyle = g; c.fillRect(0, 0, W, box.base + 10); }
-
-    // Cut-away below a horizon line, dissolving into drips
-    if (comp === 'cutaway') {
-      for (let i = 0; i < 9; i++) { c.fillStyle = rgba(acc(), rr(.35, .8)); c.fillRect(box.x + rr(0, .85) * box.w, horizon, rr(.05, .16) * box.w, rr(.04, .14) * H); }
-      for (let i = 0; i < 12 + s.intensity * 3; i++) { const x = box.x + rr(-.1, 1.1) * box.w, len = rr(.04, .3) * H, w = rr(.8, 4); c.fillStyle = rgba(acc(), rr(.6, .95)); c.fillRect(x, horizon, w, len); c.beginPath(); c.arc(x + w / 2, horizon + len, w * .8, 0, TAU); c.fill(); }
-      c.strokeStyle = rgba(ink, .85); c.lineWidth = .9; line(W * .03, horizon, W * .97, horizon);
-    }
-    if (types.includes('drips') && comp !== 'cutaway') for (let i = 0; i < 6 + s.intensity * 2; i++) { const x = sideX + rr(-.3, .3) * box.w, y = box.y + rr(.3, 1) * box.h, len = rr(.05, .25) * H; c.fillStyle = rgba(acc(), .85); c.fillRect(x, y, rr(1, 3), len); }
-
-    // Lighting
-    if (!light && ['chiaro', 'rembrandt', 'spot'].includes(s.lighting)) { const g = c.createRadialGradient(W * .5, H * .4, minD * .2, W * .5, H * .5, Math.max(W, H) * .75); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.6)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
-    if (s.lighting === 'below') blob(W * .5, H * 1.1, Math.max(W, H) * .7, '#E07B39', .28);
-
-    // Overlays
-    const ov = new Set(s.overlays);
-    c.lineWidth = .8;
-    if (ov.has('sun')) { c.fillStyle = s.palette === 'spectrum' ? '#0D0C0B' : rgba(acc(), .9); c.beginPath(); c.arc(rr(.2, .8) * W, H * rr(.14, .26), minD * .11, 0, TAU); c.fill(); }
-    if (ov.has('lines')) for (let i = 0; i < 5; i++) { c.strokeStyle = i % 2 ? rgba('#B3261E', .85) : rgba(ink, .7); const x = rr(.04, .96) * W; line(x, rr(0, .3) * H, x, rr(.6, 1) * H); }
-    if (ov.has('drawings')) { c.strokeStyle = rgba(ink, .45); c.lineWidth = .6; for (let i = 0; i < 3; i++) { const x = rr(0, .8) * W, y = rr(.3, .9) * H, w = rr(.08, .2) * W, h = rr(.06, .15) * H; c.strokeRect(x, y, w, h); line(x, y + h / 2, x + w * 1.4, y + h / 2); } c.beginPath(); c.arc(rr(.1, .9) * W, rr(.1, .5) * H, minD * .03, 0, TAU); c.stroke(); }
-    if (ov.has('text')) { c.fillStyle = rgba(ink, .35); for (let g = 0; g < 3; g++) { const x = rr(.05, .75) * W, y = rr(.05, .9) * H; for (let k = 0; k < 5; k++) c.fillRect(x, y + k * 3.2, rr(.06, .14) * W, 1.1); } }
-    if (ov.has('dots')) { for (let i = 0; i < 26; i++) { c.fillStyle = rgba(acc(), rr(.6, 1)); c.beginPath(); c.arc(rr(0, W), rr(0, H * .75), rr(.8, 3.2), 0, TAU); c.fill(); } for (let i = 0; i < 2; i++) { c.fillStyle = rgba(acc(), .35); c.beginPath(); c.arc(rr(.5, .95) * W, rr(.1, .4) * H, minD * rr(.06, .1), 0, TAU); c.fill(); } }
-    if (ov.has('splatter')) { c.fillStyle = rgba(ink, .55); for (let i = 0; i < 40; i++) { c.beginPath(); c.arc(sideX + rr(-.6, .6) * box.w, box.y + rr(0, 1) * box.h, rr(.3, 1.6), 0, TAU); c.fill(); } }
-    if (ov.has('gold')) { c.strokeStyle = rgba(GOLD, .8); c.lineWidth = .9; for (let i = 0; i < 5; i++) { const x = rr(0, W); line(x, 0, x, H); } }
-    if (ov.has('registration')) {
-      c.strokeStyle = rgba('#C2562A', .85); c.lineWidth = .7;
-      const m = 8, q = 9;
-      [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]].forEach(([x, y, sx, sy]) => { c.beginPath(); c.moveTo(x, y + sy * q); c.lineTo(x, y); c.lineTo(x + sx * q, y); c.stroke(); });
-      c.beginPath(); c.arc(W - 22, H / 2, 5, 0, TAU); c.stroke(); line(W - 30, H / 2, W - 14, H / 2); line(W - 22, H / 2 - 8, W - 22, H / 2 + 8);
-    }
-
-    // Paper or film grain
-    c.fillStyle = light ? 'rgba(0,0,0,.05)' : 'rgba(255,255,255,.035)';
-    for (let i = 0, g = W * H / 120; i < g; i++) c.fillRect(R() * W, R() * H, 1, 1);
-  }
-
-  function drawMain() {
-    const box = $('#art'), cv = $('#study');
-    const maxW = box.clientWidth;
-    if (!maxW) return;
-    const [a, b] = state.ar.split(':').map(Number);
-    const maxH = Math.max(180, Math.min(340, window.innerHeight * .4));
-    let w = maxW, h = w * b / a;
-    if (h > maxH) { h = maxH; w = h * a / b; }
-    drawStudy(cv, state, w, h);
-  }
-
-  function drawThumbs(scope, attr, getState, ratio) {
-    $$(`canvas[${attr}]`, scope).forEach(cv => {
-      const w = cv.getBoundingClientRect().width;
-      const s = getState(cv.getAttribute(attr));
-      if (w && s) drawStudy(cv, s, w, w * ratio, false);
-    });
-  }
-
-  const presetState = id => { const pr = PRESETS.find(p => p.id === id); return pr && validate(Object.assign({}, BASE, pr.set, { kind: pr.kind, title: pr.name })); };
-  const drawPresetThumbs = () => drawThumbs($('#presets'), 'data-thumb', presetState, .75);
-  const drawSeriesThumbs = () => drawThumbs($('#series'), 'data-series-thumb', i => series[+i], .45);
-  const drawFavThumbs = () => drawThumbs($('#favs'), 'data-fav-thumb', i => favs[+i] && favs[+i].state && validate(favs[+i].state), .45);
-
   // ---------- State ----------
   let state = validate(store.get('s9ps.state', {}));
   let favs = store.get('s9ps.favs', []);
   if (!Array.isArray(favs)) favs = [];
   let series = store.get('s9ps.series', []);
   series = Array.isArray(series) ? series.map(validate) : [];
-  let renderedKind = null;
+  let renderedKind = null, shownWork = null;
+  const persist = () => store.set('s9ps.state', state);
 
-  const persist = () => { store.set('s9ps.state', state); };
+  // ---------- Build ----------
+  $('#kinds').innerHTML = KINDS.map(k => `<button class="door" type="button" data-kind="${k}" aria-pressed="false">
+      <span class="door-img" style="background-image:url('${img(DOORS[k].img)}')"></span>
+      <span class="door-veil"></span>
+      <span class="door-text">
+        <span class="door-count">${PRESETS.filter(p => p.kind === k).length} works</span>
+        <span class="door-title">${KIND_LABEL[k]}</span>
+        <span class="door-sub">${DOORS[k].sub}</span>
+      </span>
+    </button>`).join('');
+  $('#ar').innerHTML = ASPECTS.map(a => `<option value="${a.id}">${a.l}</option>`).join('');
 
-  // ---------- Build controls ----------
-  const LOCK_ON = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
-  const LOCK_OFF = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
-
-  const lockBtn = (k, title) => `<button class="lock" type="button" data-lock="${k}" aria-pressed="false" aria-label="Lock ${esc(title)} when randomising"></button>`;
+  const lockBtn = (k, title) => `<button class="lock" type="button" data-lock="${k}" aria-pressed="false" aria-label="Keep ${esc(title)} when shuffling" title="Keep when shuffling"></button>`;
 
   function groupHTML(k, kind) {
     if (k === 'intensity') {
@@ -1160,7 +1038,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
         <div class="intensity">
           <div class="intensity-read"><span class="intensity-name" id="intName"></span><span class="intensity-desc" id="intDesc"></span></div>
           <input type="range" id="intensity" min="1" max="5" step="1" aria-label="Intensity">
-          <div class="ticks" aria-hidden="true">${LEVELS.map(l => `<span>${l.n}</span>`).join('')}</div>
+          <div class="ticks">${LEVELS.map((l, i) => `<button class="tick" type="button" data-level="${i + 1}">${l.n}</button>`).join('')}</div>
         </div>
       </section>`;
     }
@@ -1171,7 +1049,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       </section>`;
     }
     const g = GROUPS[k];
-    const chips = optsFor(k, kind).map(o => `<button class="chip" type="button" data-group="${k}" data-id="${o.id}" aria-pressed="false">${o.sw ? `<span class="sw">${o.sw.map(c => `<span style="background:${c}"></span>`).join('')}</span>` : ''}${esc(o.l)}</button>`).join('');
+    const chips = optsFor(k, kind).map(o => `<button class="chip${o.sw ? ' pal' : ''}" type="button" data-group="${k}" data-id="${o.id}" aria-pressed="false">${o.sw ? swatch(o) : ''}${esc(o.l)}</button>`).join('');
     return `<section class="group">
       <div class="group-head"><div><h3 class="group-title">${esc(g.title)}</h3><p class="group-hint">${esc(g.hint)}</p></div>${lockBtn(k, g.title)}</div>
       <div class="chips" role="group" aria-label="${esc(g.title)}">${chips}</div>
@@ -1179,44 +1057,73 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
   }
 
   function buildKindUI(kind) {
-    $('#controls').innerHTML = clusters(kind).map(c => `<div class="cluster"><h2 class="cluster-title">${c.title}</h2>${c.keys.map(k => groupHTML(k, kind)).join('')}</div>`).join('');
+    const nums = ['I', 'II', 'III', 'IV'];
+    $('#controls').innerHTML = clusters(kind).map((c, i) => `<div class="panel">
+      <div class="panel-head"><span class="panel-num">${nums[i]}</span><h2 class="panel-title">${c.title}</h2></div>
+      ${c.keys.map(k => groupHTML(k, kind)).join('')}
+    </div>`).join('');
+
     const list = PRESETS.filter(p => p.kind === kind);
     const cols = [...new Set(list.map(p => p.col))];
-    $('#presets').innerHTML = cols.map(col => `<div>
-      <p class="preset-collection">${esc(col)}</p>
-      <div class="presets">${list.filter(p => p.col === col).map(pr => `<button class="preset" type="button" data-preset="${pr.id}" aria-pressed="false">
-          <canvas class="preset-thumb" data-thumb="${pr.id}" aria-hidden="true"></canvas>
-          <span class="preset-body"><span class="preset-name">${esc(pr.name)}</span><span class="preset-meta">${esc(pr.meta)}</span></span>
-        </button>`).join('')}</div>
-    </div>`).join('');
+    let n = 0;
+    $('#presets').innerHTML = cols.map(col => {
+      const works = list.filter(p => p.col === col);
+      return `<div class="collection">
+        <div class="rail-head"><h2 class="rail-title">${esc(col)}</h2><span class="rail-count">${works.length} ${works.length === 1 ? 'work' : 'works'}</span><span class="rail-note">${esc(COL_NOTE[col] || '')}</span></div>
+        <div class="rail">${works.map(pr => `<button class="work" type="button" data-preset="${pr.id}" aria-pressed="false">
+            <span class="work-frame"><img class="crack" style="--d:${(n++ * .07).toFixed(2)}s" src="${img(pr.id)}" alt="${esc(pr.name)}, from ${esc(col)}" loading="lazy" decoding="async"></span>
+            <span class="work-check" aria-hidden="true">${ICON.check}</span>
+            <span class="work-name">${esc(pr.name)}</span>
+            <span class="work-meta">${esc(pr.meta)}</span>
+          </button>`).join('')}</div>
+      </div>`;
+    }).join('');
     $('#note').value = state.note;
     renderedKind = kind;
-    drawPresetThumbs();
   }
 
-  $('#ar').innerHTML = ASPECTS.map(a => `<option value="${a.id}">${a.l}</option>`).join('');
+  function showWork() {
+    const pr = closest(state);
+    if (!pr) return;
+    $('#proofLabel').textContent = state.preset === pr.id ? 'Starting point' : 'Closest work';
+    $('#proofWork').textContent = pr.name;
+    $('#proofCol').textContent = pr.col;
+    if (shownWork === pr.id) return;
+    shownWork = pr.id;
+    const el = $('#proofImg');
+    el.classList.remove('crack');
+    el.src = img(pr.id);
+    el.alt = `${pr.name}, from ${pr.col}`;
+    void el.offsetWidth;
+    el.classList.add('crack');
+  }
 
-  // ---------- Render ----------
+  function setCopyLabel(btn, done) {
+    btn.classList.toggle('done', done);
+    btn.innerHTML = done ? `${ICON.check}Copied` : `${ICON.copy}Copy prompt`;
+  }
+
   function sync() {
     if (renderedKind !== state.kind) buildKindUI(state.kind);
 
-    $$('.kind').forEach(b => b.setAttribute('aria-pressed', String(state.kind === b.dataset.kind)));
+    $$('.door').forEach(b => b.setAttribute('aria-pressed', String(state.kind === b.dataset.kind)));
     $$('.chip').forEach(b => {
-      const k = b.dataset.group, v = state[k];
+      const v = state[b.dataset.group];
       b.setAttribute('aria-pressed', String(Array.isArray(v) ? v.includes(b.dataset.id) : v === b.dataset.id));
     });
     $$('.lock').forEach(b => {
       const on = !!state.locks[b.dataset.lock];
       b.setAttribute('aria-pressed', String(on));
-      b.innerHTML = (on ? LOCK_ON : LOCK_OFF) + `<span>${on ? 'Locked' : 'Lock'}</span>`;
+      b.innerHTML = on ? ICON.lockOn : ICON.lockOff;
     });
-    $$('.preset').forEach(b => b.setAttribute('aria-pressed', String(state.preset === b.dataset.preset)));
-    $$('.tab').forEach(b => b.setAttribute('aria-selected', String(state.format === b.dataset.fmt)));
+    $$('.work').forEach(b => b.setAttribute('aria-pressed', String(state.preset === b.dataset.preset)));
+    $$('#tabs button').forEach(b => b.setAttribute('aria-selected', String(state.format === b.dataset.fmt)));
 
     const lv = LEVELS[state.intensity - 1];
     $('#intensity').value = state.intensity;
     $('#intName').textContent = lv.n;
     $('#intDesc').textContent = lv.d;
+    $$('.tick').forEach(t => t.setAttribute('aria-current', String(+t.dataset.level === state.intensity)));
     if (document.activeElement !== $('#note')) $('#note').value = state.note;
 
     $('#ar').value = state.ar;
@@ -1225,42 +1132,48 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     $('#raw').checked = !!state.raw;
     $('#mjParams').hidden = state.format !== 'mj';
 
+    const pal = optOf('palette', state.palette);
     const out = build(state, state.format);
     $('#title').textContent = state.title;
-    $('#edition').textContent = `${KIND_LABEL[state.kind]} · ${optOf('palette', state.palette).l} · ${lv.n} · ${state.ar}`;
+    $('#tags').innerHTML = `<span class="tag">${KIND_LABEL[state.kind]}</span><span class="tag">${swatch(pal)}${esc(pal.l)}</span><span class="tag">${lv.n}</span><span class="tag">${state.ar}</span>`;
     $('#out').textContent = out.prompt;
     $('#count').textContent = `${out.prompt.split(/\s+/).filter(Boolean).length} words`;
     $('#negWrap').hidden = !out.negative;
     $('#neg').textContent = out.negative || '';
     $('#settings').innerHTML = out.settings;
 
-    drawMain();
+    showWork();
     renderSeries();
     persist();
+  }
+
+  function cardHTML(s, prompt, head, meta, actions) {
+    const pr = closest(s);
+    return `<article class="card">
+      <div class="card-img">${pr ? `<img src="${img(pr.id)}" alt="" loading="lazy" decoding="async">` : ''}<span>${esc(KIND_LABEL[s.kind])}</span></div>
+      <div class="card-body">
+        <div class="card-head"><h3 class="card-title">${esc(s.title)}</h3><span class="card-num">${esc(head)}</span></div>
+        <p class="card-meta">${esc(meta)}</p>
+        <p class="card-prompt">${esc(prompt)}</p>
+        <div class="card-actions">${actions}</div>
+      </div>
+    </article>`;
   }
 
   function renderSeries() {
     const el = $('#series');
     if (!series.length) {
-      el.innerHTML = '<p class="empty">No series yet. Set up the look you want above, then press Generate five to get five related prompts that hang together as a collection.</p>';
+      el.innerHTML = '<p class="empty">No series yet. Set up the look you want above, then press Generate five for five related prompts that hang together as a collection.</p>';
       return;
     }
     el.innerHTML = series.map((s, i) => {
-      const out = build(s, state.format);
       const vary = SERIES_VARY[s.kind];
-      return `<article class="card">
-        <div><canvas class="card-thumb" data-series-thumb="${i}" aria-hidden="true"></canvas></div>
-        <div class="card-head"><h3 class="card-title">${esc(s.title)}</h3><span class="card-num">${i + 1} of ${series.length}</span></div>
-        <p class="card-meta">${esc(KIND_LABEL[s.kind])} · ${esc(optOf(vary[0], s[vary[0]]).l)} · ${LEVELS[s.intensity - 1].n}</p>
-        <div class="out">${esc(out.prompt)}</div>
-        <div class="card-actions">
-          <button class="btn small" type="button" data-series-copy="${i}">Copy</button>
-          <button class="btn small" type="button" data-series-open="${i}">Edit</button>
-          <button class="btn small" type="button" data-series-save="${i}">Save</button>
-        </div>
-      </article>`;
+      return cardHTML(s, build(s, state.format).prompt, `${i + 1} of ${series.length}`,
+        `${optOf(vary[0], s[vary[0]]).l} · ${LEVELS[s.intensity - 1].n}`,
+        `<button class="btn small" type="button" data-series-copy="${i}">Copy</button>
+         <button class="btn small" type="button" data-series-open="${i}">Edit</button>
+         <button class="btn small" type="button" data-series-save="${i}">Save</button>`);
     }).join('');
-    drawSeriesThumbs();
   }
 
   function renderFavs() {
@@ -1273,20 +1186,12 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     el.innerHTML = favs.map((f, i) => {
       let date = '';
       try { date = new Date(f.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { }
-      const kind = f.state && KIND_LABEL[f.state.kind] ? `${KIND_LABEL[f.state.kind]} · ` : '';
-      return `<article class="card">
-        ${f.state ? `<div><canvas class="card-thumb" data-fav-thumb="${i}" aria-hidden="true"></canvas></div>` : ''}
-        <div class="card-head"><h3 class="card-title">${esc(f.title || 'Untitled')}</h3><span class="card-num">${esc(date)}</span></div>
-        <p class="card-meta">${esc(kind + (FORMATS[f.format] || ''))}</p>
-        <div class="out">${esc(f.prompt)}</div>
-        <div class="card-actions">
-          <button class="btn small" type="button" data-fav-copy="${i}">Copy</button>
-          <button class="btn small" type="button" data-fav-open="${i}">Edit</button>
-          <button class="btn small" type="button" data-fav-del="${i}">Remove</button>
-        </div>
-      </article>`;
+      const s = validate(Object.assign({}, f.state || {}, { title: f.title || 'Untitled' }));
+      return cardHTML(s, f.prompt, date, FORMATS[f.format] || '',
+        `<button class="btn small" type="button" data-fav-copy="${i}">Copy</button>
+         <button class="btn small" type="button" data-fav-open="${i}">Edit</button>
+         <button class="btn small" type="button" data-fav-del="${i}">Remove</button>`);
     }).join('');
-    drawFavThumbs();
   }
 
   // ---------- Actions ----------
@@ -1299,56 +1204,55 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
-  function copyText(text, label = 'Prompt') {
+  function copyText(text, label = 'Prompt', btn) {
+    const ok = () => {
+      toast(`${label} copied`);
+      if (btn) { setCopyLabel(btn, true); clearTimeout(btn._t); btn._t = setTimeout(() => setCopyLabel(btn, false), 1700); }
+    };
     const fallback = () => {
       const ta = document.createElement('textarea');
       ta.value = text; ta.setAttribute('readonly', '');
       ta.style.position = 'fixed'; ta.style.opacity = '0'; ta.style.top = '0';
       document.body.appendChild(ta); ta.select();
-      let ok = false;
-      try { ok = document.execCommand('copy'); } catch (e) { }
+      let done = false;
+      try { done = document.execCommand('copy'); } catch (e) { }
       ta.remove();
-      toast(ok ? `${label} copied` : 'Copy was blocked here. Select the text and copy it by hand.');
+      if (done) ok(); else toast('Copy was blocked here. Select the text and copy it by hand.');
     };
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => toast(`${label} copied`), fallback);
-      } else fallback();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback);
+      else fallback();
     } catch (e) { fallback(); }
   }
 
   function applyPreset(id) {
     const pr = PRESETS.find(p => p.id === id);
-    const keep = { note: state.note, stylize: state.stylize, chaos: state.chaos, format: state.format, locks: state.locks,
-      subject: state.subject, scene: state.scene, building: state.building };
-    state = validate(Object.assign({}, BASE, keep, pr.set, { kind: pr.kind, title: pr.name, preset: id, raw: pr.set.render === 'photo' }));
+    const keep = { note: state.note, stylize: state.stylize, chaos: state.chaos, format: state.format, locks: state.locks };
+    state = validate(Object.assign({}, BASE, keep, pr.set, { kind: pr.kind, title: pr.name, preset: id, base: id, raw: pr.set.render === 'photo' || (!pr.set.render && BASE.render === 'photo') }));
     sync();
   }
 
   function setKind(kind) {
     if (kind === state.kind) return;
-    const first = PRESETS.find(p => p.kind === kind);
-    if (first) applyPreset(first.id);
-    else { state = validate(Object.assign(clone(state), { kind, preset: null })); sync(); }
+    applyPreset(PRESETS.find(p => p.kind === kind).id);
   }
 
   function randomise() {
     const s = clone(state);
     for (const k of activeGroups(s.kind)) {
       if (s.locks[k]) continue;
-      const g = GROUPS[k];
-      s[k] = g.type === 'one' ? pick(optsFor(k, s.kind)).id : randMany(k, k === 'overlays' || k === 'materials' ? 0 : 1);
+      s[k] = GROUPS[k].type === 'one' ? pick(optsFor(k, s.kind)).id : randMany(k, k === 'overlays' || k === 'materials' ? 0 : 1);
     }
-    if (!s.locks.intensity) s.intensity = 2 + Math.floor(Math.random() * 4);
+    if (!s.locks.intensity) s.intensity = 1 + Math.floor(Math.random() * 5);
     s.title = newTitle([state.title]);
-    s.preset = null;
+    s.preset = null; s.base = null;
     state = validate(s);
     sync();
     toast('New combination');
   }
 
   function makeSeries() {
-    const ints = shuffle([2, 3, 3, 4, 5]);
+    const ints = shuffle([1, 2, 3, 4, 5]);
     const titles = shuffle(TITLES).slice(0, 5);
     series = titles.map((t, i) => {
       const v = clone(state);
@@ -1356,7 +1260,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       if (!v.locks.fracture) v.fracture = randMany('fracture');
       if (!v.locks.materials) v.materials = randMany('materials', 0);
       if (!v.locks.intensity) v.intensity = ints[i];
-      v.title = t; v.preset = null;
+      v.title = t; v.preset = null; v.base = null;
       return validate(v);
     });
     store.set('s9ps.series', series);
@@ -1383,8 +1287,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 
   // ---------- Events ----------
   $('#controls').addEventListener('click', e => {
-    const chip = e.target.closest('.chip');
-    const lock = e.target.closest('.lock');
+    const chip = e.target.closest('.chip'), lock = e.target.closest('.lock'), tick = e.target.closest('.tick');
     if (chip) {
       const k = chip.dataset.group, id = chip.dataset.id, g = GROUPS[k];
       if (g.type === 'one') state[k] = id;
@@ -1401,6 +1304,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
       const k = lock.dataset.lock;
       state.locks = Object.assign({}, state.locks, { [k]: !state.locks[k] });
       sync();
+    } else if (tick) {
+      state.intensity = +tick.dataset.level; state.preset = null; sync();
     }
   });
   $('#controls').addEventListener('input', e => {
@@ -1408,18 +1313,17 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
     if (e.target.id === 'note') { state.note = e.target.value; sync(); }
   });
 
-  $('#kinds').addEventListener('click', e => { const b = e.target.closest('.kind'); if (b) setKind(b.dataset.kind); });
-  $('#presets').addEventListener('click', e => { const b = e.target.closest('.preset'); if (b) applyPreset(b.dataset.preset); });
-  $('#tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) { state.format = b.dataset.fmt; sync(); } });
+  $('#kinds').addEventListener('click', e => { const b = e.target.closest('.door'); if (b) setKind(b.dataset.kind); });
+  $('#presets').addEventListener('click', e => { const b = e.target.closest('.work'); if (b) applyPreset(b.dataset.preset); });
+  $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { state.format = b.dataset.fmt; sync(); } });
   $('#ar').addEventListener('change', e => { state.ar = e.target.value; sync(); });
   $('#stylize').addEventListener('input', e => { state.stylize = +e.target.value; sync(); });
   $('#chaos').addEventListener('input', e => { state.chaos = +e.target.value; sync(); });
   $('#raw').addEventListener('change', e => { state.raw = e.target.checked; sync(); });
   $('#retitle').addEventListener('click', () => { state.title = newTitle([state.title]); sync(); });
 
-  const copyMain = () => copyText(build(state, state.format).prompt);
-  $('#copy').addEventListener('click', copyMain);
-  $('#mCopy').addEventListener('click', copyMain);
+  $('#copy').addEventListener('click', e => copyText(build(state, state.format).prompt, 'Prompt', e.currentTarget));
+  $('#mCopy').addEventListener('click', () => copyText(build(state, state.format).prompt));
   $('#copyNeg').addEventListener('click', () => copyText(build(state, state.format).negative || '', 'Negative prompt'));
   $('#rand').addEventListener('click', randomise);
   $('#mRand').addEventListener('click', randomise);
@@ -1436,7 +1340,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
   $('#favs').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.favCopy != null) { const f = favs[+b.dataset.favCopy]; copyText(fullText(f), `“${f.title}”`); }
-    if (b.dataset.favOpen != null) { const f = favs[+b.dataset.favOpen]; openState(f.state || {}); }
+    if (b.dataset.favOpen != null) { const f = favs[+b.dataset.favOpen]; openState(Object.assign({}, f.state || {}, { title: f.title })); }
     if (b.dataset.favDel != null) {
       const [gone] = favs.splice(+b.dataset.favDel, 1);
       store.set('s9ps.favs', favs); renderFavs(); toast(`Removed “${gone.title}”`);
@@ -1445,12 +1349,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
 
   $('#copyAllFavs').addEventListener('click', () => copyText(favs.map(f => `${f.title}\n${fullText(f)}`).join('\n\n---\n\n'), 'All saved prompts'));
 
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { drawMain(); drawPresetThumbs(); drawSeriesThumbs(); drawFavThumbs(); }, 150);
-  });
-
+  setCopyLabel($('#copy'), false);
   sync();
   renderFavs();
 })();
